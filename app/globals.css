@@ -1,26 +1,76 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@font-face {
+  font-family: "Kenoky";
+  src: url("/fonts/KenokyLight.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coffekan";
+  src: url("/fonts/CoffekanRegular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-gold:    #c084d8;
+  --font-kenoky:   "Kenoky",   "Helvetica Neue", sans-serif;
+  --font-coffekan: "Coffekan", "Helvetica Neue", sans-serif;
+  --animate-fade-up:   fadeUp 0.4s ease both;
+  --animate-dot-blink: blink  1.1s ease-in-out infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 0.35; }
+  50%       { opacity: 1; }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #0d0a18;
+  color: #ede0f8;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-kenoky);
+  font-weight: 300;
+  color: #ede0f8;
+}
+
+/* liquid-glass: only the ::before border-gradient stays in CSS — cannot be expressed in Tailwind */
+.liquid-glass {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+.liquid-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.35) 0%,
+    rgba(255,255,255,0.08) 30%,
+    rgba(255,255,255,0)    50%,
+    rgba(255,255,255,0.08) 70%,
+    rgba(255,255,255,0.35) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
 }
