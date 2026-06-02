@@ -69,7 +69,7 @@ export default function ChatPage() {
           <div>
             <span className={BADGE}>✦ &nbsp;04 · Premium</span>
             <h1 className="mt-4" style={{ fontSize: "clamp(2.4rem, 5vw, 4rem)", letterSpacing: "-0.03em", lineHeight: 1.06 }}>
-              AI <span className="text-gold">Стилист</span>
+              <span className="text-gold">AI</span> Стилист
             </h1>
           </div>
           <div className="hidden md:flex flex-col items-end gap-1 pb-1">
@@ -77,14 +77,14 @@ export default function ChatPage() {
             <p className={LABEL}>Онлайн зөвлөмж</p>
           </div>
         </div>
-        <div className="h-px w-full bg-gradient-to-r from-gold/40 via-gold/10 to-transparent mb-3" />
+        <div className="h-px w-full bg-gradient-to-r from-white/20 via-white/5 to-transparent mb-3" />
       </div>
 
       {/* ── QUICK PROMPTS ── */}
       <div className="flex gap-2 overflow-x-auto py-3 shrink-0">
         {QUICK.map((p) => (
           <button key={p} onClick={() => send(p)}
-            className="text-xs text-white/45 bg-white/[0.03] border border-white/[0.07] px-4 py-2 rounded-full whitespace-nowrap flex-shrink-0 hover:text-white/75 hover:border-gold/25 transition-all font-sans">
+            className="text-xs text-white/40 bg-white/[0.04] border border-white/[0.07] px-4 py-2 rounded-full whitespace-nowrap flex-shrink-0 hover:text-white/70 hover:border-white/[0.15] transition-all font-sans">
             {p}
           </button>
         ))}
@@ -95,15 +95,15 @@ export default function ChatPage() {
         {messages.map((m, i) => (
           <div key={i} className={`flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             {m.role === "ai" && (
-              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-gold/10 border border-gold/25 shadow-[0_0_12px_rgba(192,132,216,0.2)]">
-                <span className="text-gold text-[0.6rem]">✦</span>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 bg-white/[0.08] border border-white/[0.12]">
+                <span className="text-white text-[0.6rem]">✦</span>
               </div>
             )}
             <div
               className={`max-w-[78%] px-5 py-4 text-sm ${
                 m.role === "user"
-                  ? "bg-white/[0.06] text-white/80 border border-white/[0.1]"
-                  : "bg-white/[0.025] text-white/55 border border-white/[0.07]"
+                  ? "bg-white/[0.08] text-white/85 border border-white/[0.1]"
+                  : "bg-white/[0.03] text-white/60 border border-white/[0.06]"
               }`}
               style={{
                 borderRadius: m.role === "user" ? "20px 20px 5px 20px" : "20px 20px 20px 5px",
@@ -117,8 +117,8 @@ export default function ChatPage() {
 
         {loading && (
           <div className="flex gap-3 justify-start">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-gold/10 border border-gold/25">
-              <span className="text-gold text-[0.6rem]">✦</span>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-white/[0.08] border border-white/[0.12]">
+              <span className="text-white text-[0.6rem]">✦</span>
             </div>
             <div className="bg-white/[0.025] border border-white/[0.07] px-5 py-4 flex items-center gap-2"
               style={{ borderRadius: "20px 20px 20px 5px", backdropFilter: "blur(8px)" }}>
@@ -141,14 +141,14 @@ export default function ChatPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send(input)}
             placeholder="Асуултаа бич..."
-            className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-2xl px-5 py-3.5 text-sm text-white/80 font-sans outline-none placeholder:text-white/20 focus:border-gold/30 focus:bg-white/[0.05] transition-all"
+            className="flex-1 bg-white/[0.04] border border-white/[0.07] rounded-[20px] px-5 py-4 text-sm text-white font-sans outline-none placeholder:text-white/20 focus:border-white/[0.2] transition-all"
           />
           <button
             onClick={() => send(input)}
             disabled={!input.trim() || loading}
-            className={`px-6 rounded-2xl text-sm font-sans font-semibold transition-all ${
+            className={`px-6 rounded-[16px] text-sm font-sans font-semibold transition-all ${
               input.trim()
-                ? "bg-gold text-black hover:opacity-85 shadow-[0_4px_20px_rgba(192,132,216,0.25)]"
+                ? "bg-white text-black hover:opacity-90"
                 : "bg-white/[0.03] text-white/20 border border-white/[0.06]"
             }`}>
             →

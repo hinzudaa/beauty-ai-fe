@@ -10,22 +10,22 @@ function CardVideo({ src }: { src: string }) {
   );
 }
 
-const CARD = "bg-[#160d24] rounded-3xl border border-white/[0.08] relative overflow-hidden transition-colors hover:border-gold/20";
+const CARD = "bg-white/[0.03] backdrop-blur-sm rounded-3xl border border-white/[0.07] relative overflow-hidden transition-all hover:bg-white/[0.07] hover:border-white/[0.14] hover:scale-[1.02] shadow-[0_0_40px_rgba(168,100,255,0.06)]";
 const BADGE = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold/15 border border-gold/30 text-gold text-[0.68rem] tracking-[0.14em] uppercase font-medium font-sans";
 const LABEL = "text-[0.68rem] tracking-[0.18em] uppercase font-medium text-white/40 font-sans";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#0d0a18] px-6 md:px-12 lg:px-20 pt-14 pb-20">
+    <main className="min-h-screen bg-black px-6 md:px-12 lg:px-20 pt-14 pb-20">
 
       <section className="mb-16">
         <div className="mb-7">
-          <span className={BADGE}>✦ &nbsp;Монголд анхных · 2025</span>
+          <span className={BADGE}>✦ &nbsp;Монголд анхных · 2026</span>
         </div>
 
         <div className="flex flex-col gap-10 md:flex-row md:items-end md:justify-between">
           <div className="max-w-3xl">
-            <h1 style={{ fontSize: "clamp(3rem, 7vw, 5.5rem)", lineHeight: 1.06, letterSpacing: "-0.03em" }}>
+            <h1 style={{ fontSize: "clamp(3.5rem, 8vw, 6rem)", lineHeight: 1.06, letterSpacing: "-0.03em" }}>
               Таны гоо сайхныг
               <br />
               <span className="text-gold">AI</span> илрүүлнэ.
@@ -39,7 +39,7 @@ export default function Home() {
           <div className="flex flex-col gap-2.5 items-start md:items-end shrink-0">
             <Link
               href="/analyze"
-              className="liquid-glass backdrop-blur-md bg-white/[0.05] shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] rounded-full px-7 py-3 text-sm text-white font-sans hover:scale-[1.02] transition-transform"
+              className="bg-white text-black rounded-full px-8 py-3.5 text-sm font-semibold font-sans hover:scale-[1.02] transition-all shadow-[0_0_40px_rgba(255,255,255,0.15)]"
               style={{ letterSpacing: "0.07em" }}
             >
               Туршиж үзэх →

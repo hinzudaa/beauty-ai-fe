@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
 
-const BADGE = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold/15 border border-gold/30 text-gold text-[0.68rem] tracking-[0.14em] uppercase font-medium font-sans";
-const LABEL = "text-[0.68rem] tracking-[0.18em] uppercase font-medium text-white/35 font-sans";
-const CARD  = "bg-white/[0.03] border border-white/[0.08] rounded-2xl backdrop-blur-sm";
+const BADGE = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.06] border border-white/[0.1] text-white/60 text-[0.68rem] tracking-[0.14em] uppercase font-medium font-sans";
+const LABEL = "text-[0.68rem] tracking-[0.18em] uppercase font-medium text-white/30 font-sans";
+const CARD  = "bg-white/[0.04] border border-white/[0.07] rounded-[20px] backdrop-blur-xl";
 
 const events = [
   { id: "interview", label: "Ажлын ярилцлага", sub: "Professional", icon: "◈" },
@@ -40,8 +40,8 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
     <button onClick={onClick}
       className={`px-4 py-2 rounded-full text-sm font-sans transition-all ${
         active
-          ? "bg-gold text-black font-semibold shadow-[0_2px_16px_rgba(192,132,216,0.3)]"
-          : "bg-white/[0.04] text-white/45 border border-white/[0.08] hover:text-white/75 hover:border-white/20"
+          ? "bg-white text-black font-semibold"
+          : "bg-white/[0.04] text-white/50 border border-white/[0.08] rounded-full hover:text-white/80"
       }`}>
       {label}
     </button>
@@ -62,7 +62,7 @@ export default function OutfitPage() {
   }
 
   return (
-    <div className="min-h-screen px-6 md:px-12 lg:px-20 pt-14 pb-24">
+    <div className="min-h-screen px-6 md:px-12 lg:px-20 pt-16 pb-24">
 
       {/* ── HERO ── */}
       <section className="mb-16">
@@ -71,9 +71,9 @@ export default function OutfitPage() {
             <span className={BADGE}>✦ &nbsp;02 · MVP гол</span>
             <h1 className="mt-5" style={{ fontSize: "clamp(3rem, 6vw, 5rem)", letterSpacing: "-0.03em", lineHeight: 1.04 }}>
               Хувцас<br />
-              <span className="text-gold">Генератор</span>
+              <span className="text-white/80">Генератор</span>
             </h1>
-            <p className="mt-5 text-base text-white/45 font-sans max-w-sm" style={{ lineHeight: 1.8 }}>
+            <p className="mt-5 text-base text-white/55 font-sans max-w-sm" style={{ lineHeight: 1.8 }}>
               Event сонгоод улирал, style-аа тохируулж AI-аар хувцас хослол авах.
             </p>
           </div>
@@ -82,7 +82,7 @@ export default function OutfitPage() {
             <p className={LABEL}>Event сонголт</p>
           </div>
         </div>
-        <div className="mt-10 h-px w-full bg-gradient-to-r from-gold/40 via-gold/10 to-transparent" />
+        <div className="mt-10 h-px w-full bg-gradient-to-r from-white/20 via-white/5 to-transparent" />
       </section>
 
       {/* ── SPLIT ── */}
@@ -96,14 +96,14 @@ export default function OutfitPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {events.map((e) => (
                 <button key={e.id} onClick={() => { setSelectedEvent(e.id); setResult(null); }}
-                  className={`p-5 rounded-2xl text-left transition-all group ${
+                  className={`p-5 rounded-[20px] text-left transition-all group ${
                     selectedEvent === e.id
-                      ? "bg-gold/10 border border-gold/40 shadow-[0_0_30px_rgba(192,132,216,0.1)]"
-                      : "bg-white/[0.025] border border-white/[0.07] hover:border-white/18 hover:bg-white/[0.035]"
+                      ? "bg-white/[0.08] border border-white/[0.14] shadow-[0_0_40px_rgba(168,100,255,0.06)]"
+                      : "bg-white/[0.04] border border-white/[0.07] hover:bg-white/[0.07] hover:border-white/[0.14]"
                   }`}>
-                  <span className={`text-base mb-2 block ${selectedEvent === e.id ? "text-gold" : "text-white/30"}`}>{e.icon}</span>
-                  <p className="text-sm text-white/85 font-sans font-medium mb-1">{e.label}</p>
-                  <p className={`text-xs font-sans ${selectedEvent === e.id ? "text-gold/70" : "text-white/30"}`}>{e.sub}</p>
+                  <span className={`text-base mb-2 block ${selectedEvent === e.id ? "text-white" : "text-white/30"}`}>{e.icon}</span>
+                  <p className="text-sm text-white font-sans font-medium mb-1">{e.label}</p>
+                  <p className={`text-xs font-sans ${selectedEvent === e.id ? "text-white/60" : "text-white/30"}`}>{e.sub}</p>
                 </button>
               ))}
             </div>
@@ -126,10 +126,10 @@ export default function OutfitPage() {
           </div>
 
           <button onClick={generate} disabled={!selectedEvent || loading}
-            className={`w-full py-4 rounded-2xl text-sm font-semibold font-sans transition-all ${
+            className={`w-full rounded-full text-sm font-semibold font-sans transition-all py-3.5 ${
               selectedEvent
-                ? "bg-gold text-black hover:opacity-85 shadow-[0_4px_30px_rgba(192,132,216,0.25)]"
-                : "bg-white/[0.03] text-white/20 border border-white/[0.06] cursor-not-allowed"
+                ? "bg-white text-black hover:scale-[1.02] hover:opacity-90 shadow-[0_0_40px_rgba(255,255,255,0.15)]"
+                : "bg-white/[0.06] text-white/60 border border-white/[0.08] cursor-not-allowed opacity-50"
             }`}
             style={{ letterSpacing: "0.1em" }}>
             {loading ? "Үүсгэж байна..." : "Зөвлөмж авах →"}
@@ -146,40 +146,40 @@ export default function OutfitPage() {
                 { step: "02", text: "Улирал ба style-аа тохируул" },
                 { step: "03", text: "AI таны сонголтод тохирсон хослол гаргана" },
               ].map((s) => (
-                <div key={s.step} className={`${CARD} p-5 flex gap-4 items-start`}>
-                  <span className="text-gold/50 font-kenoky text-2xl leading-none shrink-0">{s.step}</span>
-                  <p className="text-sm text-white/50 font-sans pt-1" style={{ lineHeight: 1.65 }}>{s.text}</p>
+                <div key={s.step} className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] p-5 flex gap-4 items-start hover:bg-white/[0.07] hover:border-white/[0.14] transition-all`}>
+                  <span className="text-white/30 font-kenoky text-2xl leading-none shrink-0">{s.step}</span>
+                  <p className="text-sm text-white/55 font-sans pt-1" style={{ lineHeight: 1.65 }}>{s.text}</p>
                 </div>
               ))}
-              <div className="p-5 rounded-2xl bg-gold/[0.04] border border-gold/18 mt-2">
-                <p className="text-xs text-white/35 font-sans" style={{ lineHeight: 1.8 }}>
-                  Event сонгосны дараа <span className="text-gold/60">Зөвлөмж авах</span> товч идэвхжинэ.
+              <div className={`${CARD} p-5 mt-2`}>
+                <p className="text-xs text-white/30 font-sans" style={{ lineHeight: 1.8 }}>
+                  Event сонгосны дараа <span className="text-white/60">Зөвлөмж авах</span> товч идэвхжинэ.
                 </p>
               </div>
             </>
           )}
 
           {loading && (
-            <div className={`${CARD} p-12 text-center`}>
+            <div className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] p-12 text-center`}>
               <div className="flex gap-2.5 justify-center mb-5">
                 {[0,1,2].map((i) => (
-                  <span key={i} className="w-2 h-2 rounded-full inline-block bg-gold animate-dot-blink"
+                  <span key={i} className="w-2 h-2 rounded-full inline-block bg-white animate-dot-blink"
                     style={{ animationDelay: `${i * 0.18}s` }} />
                 ))}
               </div>
               <p className="text-base text-white/70 font-sans mb-1">Хослол үүсгэж байна</p>
-              <p className="text-xs text-white/25 font-sans" style={{ letterSpacing: "0.08em" }}>{selectedSeason} · {selectedStyle}</p>
+              <p className="text-xs text-white/30 font-sans" style={{ letterSpacing: "0.08em" }}>{selectedSeason} · {selectedStyle}</p>
             </div>
           )}
 
           {result && (
             <div className="space-y-4 animate-fade-up">
               {result.map((outfit, i) => (
-                <div key={i} className={`${CARD} p-6`}>
+                <div key={i} className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] p-6 hover:bg-white/[0.07] hover:border-white/[0.14] transition-all`}>
                   <div className="flex items-start justify-between mb-5">
                     <div>
                       <p className={`${LABEL} mb-1.5`}>Хослол {i + 1}</p>
-                      <h3 style={{ fontSize: "1.15rem", letterSpacing: "-0.02em", fontFamily: "var(--font-kenoky)", fontWeight: 300, color: "#ede0f8" }}>{outfit.name}</h3>
+                      <h3 style={{ fontSize: "1.15rem", letterSpacing: "-0.02em", fontFamily: "var(--font-kenoky)", fontWeight: 300, color: "rgba(255,255,255,0.9)", textShadow: "0 0 30px rgba(168,100,255,0.3)" }}>{outfit.name}</h3>
                     </div>
                     <div className="flex gap-1.5 mt-1">
                       {outfit.colors.map((c) => (
@@ -189,20 +189,20 @@ export default function OutfitPage() {
                   </div>
                   <ul className="space-y-2.5 mb-5">
                     {outfit.items.map((item) => (
-                      <li key={item} className="flex gap-3.5 text-sm text-white/50 font-sans" style={{ lineHeight: 1.55 }}>
-                        <span className="text-gold/60 shrink-0">—</span>{item}
+                      <li key={item} className="flex gap-3.5 text-sm text-white/55 font-sans" style={{ lineHeight: 1.55 }}>
+                        <span className="text-white/30 shrink-0">—</span>{item}
                       </li>
                     ))}
                   </ul>
-                  <div className="rounded-xl p-4 bg-gold/[0.05] border border-gold/20">
-                    <p className="text-xs font-sans" style={{ lineHeight: 1.75, color: "rgba(192,132,216,0.75)" }}>
-                      <span className="opacity-60">Стилистийн зөвлөмж — </span>{outfit.tip}
+                  <div className="rounded-[16px] p-4 bg-white/[0.04] border border-white/[0.08]">
+                    <p className="text-xs text-white/55 font-sans" style={{ lineHeight: 1.75 }}>
+                      <span className="text-white/30">Стилистийн зөвлөмж — </span>{outfit.tip}
                     </p>
                   </div>
                 </div>
               ))}
               <button onClick={() => { setSelectedEvent(null); setResult(null); }}
-                className="w-full py-3.5 rounded-2xl text-sm text-white/30 bg-white/[0.02] border border-white/[0.06] font-sans hover:text-white/55 transition-colors"
+                className="w-full py-3.5 bg-white/[0.06] text-white/60 border border-white/[0.08] rounded-full hover:text-white hover:border-white/[0.18] transition-all font-sans text-sm"
                 style={{ letterSpacing: "0.08em" }}>
                 Дахин үүсгэх
               </button>

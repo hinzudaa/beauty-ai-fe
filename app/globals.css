@@ -35,8 +35,8 @@
 }
 
 body {
-  background: #0d0a18;
-  color: #ede0f8;
+  background: #000;
+  color: #fff;
   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   font-size: 15px;
@@ -46,7 +46,7 @@ body {
 h1, h2, h3, h4 {
   font-family: var(--font-kenoky);
   font-weight: 300;
-  color: #ede0f8;
+  color: #fff;
 }
 
 /* liquid-glass: only the ::before border-gradient stays in CSS — cannot be expressed in Tailwind */
