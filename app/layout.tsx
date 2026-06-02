@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Nav from "./components/Nav";
+import { AuthProvider } from "./lib/AuthContext";
 
 export const metadata: Metadata = {
   title: "Beauty AI Platform",
@@ -19,8 +20,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="absolute bottom-0 left-[35%] w-[45rem] h-[45rem] rounded-full opacity-[0.15]"
             style={{ background: "radial-gradient(circle, #6d28d9 0%, transparent 60%)", filter: "blur(80px)" }} />
         </div>
-        <Nav />
-        <main className="relative z-10">{children}</main>
+        <AuthProvider>
+          <Nav />
+          <main className="relative z-10">{children}</main>
+        </AuthProvider>
       </body>
     </html>
   );
