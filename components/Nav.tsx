@@ -51,15 +51,18 @@ export default function Nav() {
         {!isClient || loading ? (
           <div className="w-[88px] h-[34px] rounded-full bg-white/[0.05] animate-pulse" />
         ) : user ? (
-          <div className="flex items-center gap-3">
-            <span className="hidden sm:block text-xs text-white/35 font-sans truncate max-w-[90px]">
+          <div className="flex items-center gap-2">
+            <Link
+              href="/profile"
+              className={`hidden sm:flex items-center gap-1.5 text-xs font-sans px-3 py-1.5 rounded-full transition-all ${
+                pathname === "/profile"
+                  ? "text-white bg-white/[0.08] border border-white/[0.14]"
+                  : "text-white/40 hover:text-white/70 border border-white/[0.06] hover:border-white/[0.14]"
+              }`}
+            >
+              <span className="text-[0.6rem]">◉</span>
               {user.phone}
-            </span>
-            {user.phoneVerified && (
-              <span className="hidden sm:flex items-center gap-1 text-[0.6rem] text-gold font-sans border border-gold/30 rounded-full px-2 py-0.5">
-                ✦ Verified
-              </span>
-            )}
+            </Link>
             <button
               onClick={() => { logout(); router.push("/"); }}
               className="text-xs text-white/40 hover:text-white/70 font-sans border border-white/[0.08] hover:border-white/[0.18] rounded-full px-4 py-1.5 transition-all"
