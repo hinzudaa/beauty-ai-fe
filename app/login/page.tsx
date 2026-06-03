@@ -9,7 +9,7 @@ import { ApiError } from "@/utils/request";
 import type { OtpStartResponse, AuthResponse } from "@/types/auth";
 
 export default function LoginPage() {
-  const { login, user, loading } = useAuth();
+  const { login } = useAuth();
   const router = useRouter();
 
   const [step, setStep] = useState<"phone" | "otp">("phone");
@@ -17,10 +17,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [session, setSession] = useState<OtpStartResponse | null>(null);
-
-  useEffect(() => {
-    if (!loading && user) router.replace("/");
-  }, [user, loading, router]);
 
   const { data: secondsLeft = 0 } = useSWR(
     session ? ["countdown", session.expiresAt] : null,
@@ -83,8 +79,6 @@ export default function LoginPage() {
   function fmt(s: number) {
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   }
-
-  if (loading) return null;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6">

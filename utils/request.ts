@@ -11,10 +11,14 @@ export const tokenStore = {
   get: (): string | null =>
     typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null,
   set: (token: string) => {
-    if (typeof window !== "undefined") localStorage.setItem(TOKEN_KEY, token);
+    if (typeof window === "undefined") return;
+    localStorage.setItem(TOKEN_KEY, token);
+    document.cookie = `${TOKEN_KEY}=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
   },
   clear: () => {
-    if (typeof window !== "undefined") localStorage.removeItem(TOKEN_KEY);
+    if (typeof window === "undefined") return;
+    localStorage.removeItem(TOKEN_KEY);
+    document.cookie = `${TOKEN_KEY}=; path=/; max-age=0`;
   },
 };
 
