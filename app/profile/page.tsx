@@ -68,12 +68,6 @@ export default function ProfilePage() {
               </span>
             )}
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-[0.84rem] font-semibold text-[#6e6e73] bg-transparent border border-[rgba(0,0,0,0.1)] rounded-full px-5 py-[9px] cursor-pointer self-start md:self-auto"
-          >
-            Гарах
-          </button>
         </div>
         <div className="mt-7 h-px bg-[rgba(0,0,0,0.07)]" />
       </section>
