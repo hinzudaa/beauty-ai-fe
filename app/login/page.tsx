@@ -12,10 +12,10 @@ export default function LoginPage() {
   const { login, user, loading } = useAuth();
   const router = useRouter();
 
-  const [step, setStep]       = useState<"phone" | "otp">("phone");
-  const [phone, setPhone]     = useState("");
-  const [error, setError]     = useState("");
-  const [busy, setBusy]       = useState(false);
+  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [phone, setPhone] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const [session, setSession] = useState<OtpStartResponse | null>(null);
 
   useEffect(() => {
@@ -28,6 +28,7 @@ export default function LoginPage() {
       Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)),
     { refreshInterval: 1000, revalidateOnFocus: false }
   );
+
 
   const { data: verifyResult } = useSWR(
     step === "otp" && session ? ["otp-verify", session.sessionId] : null,
@@ -52,6 +53,7 @@ export default function LoginPage() {
     login(res.token, res.user);
     router.replace("/");
   }, [verifyResult, login, router]);
+
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -78,8 +80,9 @@ export default function LoginPage() {
     setError("");
   }
 
-  const fmt = (s: number) =>
-    `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  function fmt(s: number) {
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  }
 
   if (loading) return null;
 
@@ -132,11 +135,10 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={busy || !phone}
-                className={`w-full mt-1 py-3.5 rounded-full text-sm font-semibold font-sans transition-all ${
-                  busy || !phone
+                className={`w-full mt-1 py-3.5 rounded-full text-sm font-semibold font-sans transition-all ${busy || !phone
                     ? "bg-white/20 text-white/40 cursor-not-allowed"
                     : "bg-white text-black hover:scale-[1.02] hover:opacity-90 shadow-[0_0_40px_rgba(255,255,255,0.15)]"
-                }`}
+                  }`}
                 style={{ letterSpacing: "0.06em" }}>
                 {busy ? (
                   <span className="flex items-center justify-center gap-1.5">
@@ -166,12 +168,14 @@ export default function LoginPage() {
               <p className="text-sm text-white/70 font-sans mb-4" style={{ lineHeight: 1.7 }}>
                 {session.displayInstruction}
               </p>
+
               <a
                 href={session.smsUri}
                 className="inline-flex items-center gap-2 bg-white text-black text-sm font-semibold px-6 py-3 rounded-full hover:scale-[1.02] hover:opacity-90 transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] font-sans"
                 style={{ letterSpacing: "0.04em" }}>
                 <span>✉</span> SMS нээх
               </a>
+
               <p className="mt-3 text-[0.68rem] text-white/25 font-sans">
                 Гар утас дээр дарна уу
               </p>
