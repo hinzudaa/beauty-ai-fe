@@ -118,17 +118,11 @@ export default function ProfilePage() {
             </div>
           ) : (
             <div className="card p-5 text-center">
-              <p className="text-[0.9rem] font-bold text-[#1c1c1e] mb-2">
-                {!data?.user.freeTrialUsed ? "Нэг үнэгүй туршилт байна ✦" : "Захиалга байхгүй"}
-              </p>
-              <p className="text-[0.8rem] text-[#8e8e93] mb-4">
-                {!data?.user.freeTrialUsed
-                  ? "Дурын шинжилгээгээ үнэгүй авна уу"
-                  : "Шинжилгээ авахын тулд захиалга сонгоно уу"}
-              </p>
+              <p className="text-[0.9rem] font-bold text-[#1c1c1e] mb-2">Захиалга байхгүй</p>
+              <p className="text-[0.8rem] text-[#8e8e93] mb-4">Шинжилгээ авахын тулд захиалга сонгоно уу</p>
               <a href="/analyze" className="block py-[10px] rounded-full text-[0.85rem] font-bold text-white text-center"
                 style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)", boxShadow: "0 4px 16px rgba(147,51,234,0.35)" }}>
-                {!data?.user.freeTrialUsed ? "Үнэгүй туршиж үзэх →" : "Захиалга авах →"}
+                Захиалга авах →
               </a>
             </div>
           )}

@@ -6,7 +6,7 @@ import { runFullAnalysis, fileToDataUrl, FullAnalysisResult } from "@/apis/analy
 import { createSubscriptionInvoice, checkPayment, InvoiceResponse, QPayUrl } from "@/apis/payment";
 import { getProfile, ProfileData } from "@/apis/profile";
 import { getPrices } from "@/apis/prices";
-import { tokenStore } from "@/utils/request";
+import { tokenStore, ApiError } from "@/utils/request";
 import { photoStore } from "@/utils/photoStore";
 
 type Step = "upload" | "occasion" | "subscribe" | "payment" | "analyzing" | "result";
@@ -78,9 +78,11 @@ export default function AnalyzePage() {
     try {
       const p = await getProfile();
       setProfile(p);
-      const canGo = !p.user.freeTrialUsed || p.subscription?.status === "active";
-      if (canGo) { await runAll(); }
-      else        { setStep("subscribe"); }
+      if (p.subscription?.status === "active") {
+        await runAll();
+      } else {
+        setStep("subscribe");
+      }
     } catch {
       setError("Профайл мэдээлэл авахад алдаа гарлаа");
     }
@@ -184,7 +186,6 @@ export default function AnalyzePage() {
             <div className="text-center">
               <p className="text-[1.15rem] font-bold text-[#1c1c1e] mb-2">Selfie оруулна уу</p>
               <p className="text-[0.88rem] text-[#8e8e93]">JPG · PNG · WEBP · Урд тал харсан зураг хамгийн сайн</p>
-              <p className="text-[0.8rem] text-[#9333ea] mt-2 font-semibold">Эхний удаа үнэгүй ✦</p>
             </div>
           </div>
         )}
@@ -246,7 +247,7 @@ export default function AnalyzePage() {
               <div>
                 <p className="text-[0.95rem] font-bold text-[#1c1c1e] mb-1">Захиалга шаардлагатай</p>
                 <p className="text-[0.85rem] text-[#6e6e73] leading-[1.6]">
-                  Нэг удаагийн үнэгүй туршилт дууссан. Шинжилгээ үргэлжлүүлэхийн тулд сарын захиалга сонгоно уу.
+                  Шинжилгээ хийхийн тулд сарын захиалга сонгоно уу.
                 </p>
                 {profile?.subscription && (
                   <p className="text-[0.78rem] text-[#9333ea] mt-1 font-semibold">

@@ -26,7 +26,6 @@ export interface ProfileData {
     id:            string;
     phone:         string;
     phoneVerified: boolean;
-    freeTrialUsed: boolean;
     createdAt:     string;
   };
   subscription: Subscription | null;

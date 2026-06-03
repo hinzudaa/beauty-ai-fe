@@ -311,7 +311,7 @@ export default async function Home() {
               Хэрэгцээндээ тохирсон<br />багцаа сонгоорой
             </h2>
             <p className="text-[0.95rem] text-[#6e6e73] max-w-[460px] mx-auto leading-[1.75]">
-              Эхний нэг удаагийн туршилт үнэгүй. Дараагийн хэрэглээнд сарын багц шаардлагатай.
+              Нүүр · Үс & Грим · Хувцас — нэг дор. Хэрэгцээндээ тохирсон багцаа сонгоно уу.
             </p>
           </div>
 
@@ -344,7 +344,7 @@ export default async function Home() {
 
           <div className="anim-fade-in delay-500 text-center mt-7">
             <p className="text-[0.82rem] text-[#aeaeb2]">
-              Эхний нэг анализ үнэгүй · Нэвтэрч орсны дараа · Дурдсан үед цуцлах боломжтой
+              Нэвтэрч орсны дараа · Дурдсан үед цуцлах боломжтой
             </p>
           </div>
         </section>

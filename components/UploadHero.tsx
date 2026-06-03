@@ -50,12 +50,9 @@ export default function UploadHero() {
             <p className="text-[1.15rem] font-bold text-[#1c1c1e] mb-2">
               Зургаа оруулна уу
             </p>
-            <p className="text-[0.88rem] text-[#8e8e93] mb-3">
+            <p className="text-[0.88rem] text-[#8e8e93]">
               JPG · PNG · WEBP · Selfie хамгийн сайн
             </p>
-            <span className="text-[0.78rem] font-bold text-[#9333ea] bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] rounded-full px-[14px] py-1">
-              Эхний удаа үнэгүй ✦
-            </span>
           </div>
 
           {loading && (
