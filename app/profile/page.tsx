@@ -6,27 +6,24 @@ import { useAuth } from "@/lib/AuthContext";
 import { getProfile, ProfileData } from "@/apis/profile";
 import { tokenStore } from "@/utils/request";
 
-const LABEL = "text-[0.68rem] tracking-[0.18em] uppercase font-medium text-white/30 font-sans";
-const CARD  = "bg-white/[0.04] border border-white/[0.07] rounded-[20px] backdrop-blur-xl";
+const F = "var(--font-montserrat), 'Helvetica Neue', Arial, sans-serif";
+const card: React.CSSProperties = { background: "#fff", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 18, boxShadow: "0 2px 14px rgba(0,0,0,0.05)" };
+const labelStyle: React.CSSProperties = { fontFamily: F, fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8e8e93" };
 
 const FEATURE: Record<string, { label: string; icon: string; color: string }> = {
-  analyze:   { label: "Нүүрний шинжилгээ", icon: "◈", color: "text-purple-400" },
-  outfit:    { label: "Хувцас генератор",  icon: "◉", color: "text-blue-400"   },
-  hairstyle: { label: "Үс засал & Грим",   icon: "✦", color: "text-pink-400"   },
+  analyze:   { label: "Нүүрний шинжилгээ", icon: "◈", color: "#9333ea" },
+  outfit:    { label: "Хувцас генератор",  icon: "◉", color: "#7c3aed" },
+  hairstyle: { label: "Үс засал & Грим",   icon: "✦", color: "#a855f7" },
 };
 
-const STATUS_STYLE: Record<string, string> = {
-  paid:    "text-green-400 bg-green-400/10 border-green-400/20",
-  pending: "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",
-  failed:  "text-red-400 bg-red-400/10 border-red-400/20",
+const STATUS_STYLE: Record<string, React.CSSProperties> = {
+  paid:    { color: "#16a34a", background: "rgba(22,163,74,0.08)",  border: "1px solid rgba(22,163,74,0.2)"  },
+  pending: { color: "#d97706", background: "rgba(217,119,6,0.08)",  border: "1px solid rgba(217,119,6,0.2)"  },
+  failed:  { color: "#dc2626", background: "rgba(220,38,38,0.08)",  border: "1px solid rgba(220,38,38,0.2)"  },
 };
-const STATUS_LABEL: Record<string, string> = {
-  paid: "Төлсөн", pending: "Хүлээгдэж буй", failed: "Амжилтгүй",
-};
+const STATUS_LABEL: Record<string, string> = { paid: "Төлсөн", pending: "Хүлээгдэж буй", failed: "Амжилтгүй" };
 
-function fmt(d: string) {
-  return new Date(d).toLocaleDateString("mn-MN", { year: "numeric", month: "2-digit", day: "2-digit" });
-}
+function fmt(d: string) { return new Date(d).toLocaleDateString("mn-MN", { year: "numeric", month: "2-digit", day: "2-digit" }); }
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
@@ -38,17 +35,14 @@ export default function ProfilePage() {
     { revalidateOnFocus: false }
   );
 
-  function handleLogout() {
-    logout();
-    router.push("/");
-  }
+  function handleLogout() { logout(); router.push("/"); }
 
   if (!user && !isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6">
-        <div className="text-center space-y-4">
-          <p className="text-white/50 font-sans">Профайл харахын тулд нэвтрэнэ үү</p>
-          <a href="/login" className="inline-block bg-white text-black text-sm font-semibold px-6 py-2.5 rounded-full hover:opacity-90 transition-all">
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 16 }}>
+          <p style={{ fontFamily: F, fontSize: "1rem", color: "#6e6e73" }}>Профайл харахын тулд нэвтрэнэ үү</p>
+          <a href="/login" style={{ display: "inline-block", background: "#1c1c1e", color: "#fff", fontFamily: F, fontSize: "0.87rem", fontWeight: 700, padding: "11px 24px", borderRadius: 999, textDecoration: "none", boxShadow: "0 4px 14px rgba(0,0,0,0.18)" }}>
             Нэвтрэх →
           </a>
         </div>
@@ -56,73 +50,72 @@ export default function ProfilePage() {
     );
   }
 
-  const totalSpend  = data?.payments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0) ?? 0;
-  const totalUsage  = Object.values(data?.usage ?? {}).reduce((a, b) => a + b, 0);
+  const totalSpend = data?.payments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0) ?? 0;
+  const totalUsage = Object.values(data?.usage ?? {}).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="min-h-screen px-6 md:px-12 lg:px-20 pt-16 pb-24">
+    <div style={{ minHeight: "100vh", padding: "64px 24px 96px", fontFamily: F }} className="md:px-12 lg:px-20">
 
-      <section className="mb-12">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+      {/* Hero */}
+      <section style={{ marginBottom: 40 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }} className="md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs text-white/30 uppercase tracking-widest font-sans mb-3">Профайл</p>
-            <h1 className="text-4xl font-kenoky text-white" style={{ letterSpacing: "-0.02em" }}>
+            <p style={{ ...labelStyle, marginBottom: 12 }}>Профайл</p>
+            <h1 style={{ fontFamily: F, fontSize: "clamp(2rem,4vw,3rem)", fontWeight: 800, letterSpacing: "-0.02em", color: "#1c1c1e" }}>
               {data?.user.phone ?? user?.phone ?? "—"}
             </h1>
             {data?.user.phoneVerified && (
-              <span className="inline-flex items-center gap-1.5 mt-2 text-[0.65rem] text-green-400 bg-green-400/10 border border-green-400/20 rounded-full px-3 py-1 font-sans">
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, marginTop: 10, fontFamily: F, fontSize: "0.72rem", fontWeight: 700, color: "#16a34a", background: "rgba(22,163,74,0.08)", border: "1px solid rgba(22,163,74,0.2)", borderRadius: 999, padding: "5px 12px" }}>
                 ✓ Баталгаажсан
               </span>
             )}
           </div>
+          <button onClick={handleLogout}
+            style={{ fontFamily: F, fontSize: "0.84rem", fontWeight: 600, color: "#6e6e73", background: "transparent", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 999, padding: "9px 20px", cursor: "pointer" }}>
+            Гарах
+          </button>
         </div>
-        <div className="mt-8 h-px w-full bg-gradient-to-r from-white/20 via-white/5 to-transparent" />
+        <div style={{ marginTop: 28, height: 1, background: "rgba(0,0,0,0.07)" }} />
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* ── Left col: stats + usage ── */}
-        <div className="space-y-4">
+        {/* Left col */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[
               { label: "Нийт зарцуулсан", value: `${totalSpend.toLocaleString()}₮`, icon: "◇" },
-              { label: "Нийт хэрэглэсэн", value: totalUsage,                         icon: "◈" },
+              { label: "Нийт хэрэглэсэн", value: String(totalUsage), icon: "◈" },
             ].map((s) => (
-              <div key={s.label} className={`${CARD} p-5`}>
-                <span className="text-white/30 text-xs mb-2 block">{s.icon}</span>
-                <p className="text-2xl font-semibold text-white">{s.value}</p>
-                <p className={`${LABEL} mt-1`}>{s.label}</p>
+              <div key={s.label} style={{ ...card, padding: 18 }}>
+                <span style={{ fontSize: "1.1rem", color: "#9333ea", display: "block", marginBottom: 10 }}>{s.icon}</span>
+                <p style={{ fontFamily: F, fontSize: "1.5rem", fontWeight: 800, color: "#1c1c1e", letterSpacing: "-0.02em" }}>{s.value}</p>
+                <p style={{ ...labelStyle, marginTop: 4 }}>{s.label}</p>
               </div>
             ))}
           </div>
 
-          <div className={CARD + " p-5"}>
-            <p className={`${LABEL} mb-4`}>Боломжийн хэрэглээ</p>
+          <div style={{ ...card, padding: 20 }}>
+            <p style={{ ...labelStyle, marginBottom: 16 }}>Боломжийн хэрэглээ</p>
             {isLoading
-              ? <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-6 bg-white/[0.06] rounded animate-pulse" />)}</div>
+              ? <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{[...Array(3)].map((_, i) => <div key={i} style={{ height: 20, background: "rgba(0,0,0,0.05)", borderRadius: 8, animation: "pulse 1.5s infinite" }} />)}</div>
               : (
-                <div className="space-y-4">
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {Object.entries(data?.usage ?? {}).map(([feat, count]) => {
                     const meta = FEATURE[feat];
-                    const pct  = totalUsage > 0 ? Math.round((count / totalUsage) * 100) : 0;
+                    const pct = totalUsage > 0 ? Math.round((count / totalUsage) * 100) : 0;
                     return (
                       <div key={feat}>
-                        <div className="flex justify-between text-sm mb-1.5">
-                          <span className={`flex items-center gap-1.5 ${meta?.color ?? "text-white/50"}`}>
-                            <span className="text-xs">{meta?.icon}</span>
-                            <span className="font-sans text-xs text-white/50">{meta?.label ?? feat}</span>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <span style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: F, fontSize: "0.82rem", fontWeight: 500, color: meta?.color ?? "#6e6e73" }}>
+                            <span style={{ fontSize: "0.75rem" }}>{meta?.icon}</span>
+                            <span style={{ color: "#6e6e73" }}>{meta?.label ?? feat}</span>
                           </span>
-                          <span className="text-white font-medium text-sm">{count}</span>
+                          <span style={{ fontFamily: F, fontSize: "0.87rem", fontWeight: 700, color: "#1c1c1e" }}>{count}</span>
                         </div>
-                        <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${
-                              feat === "analyze" ? "bg-purple-500" :
-                              feat === "outfit"  ? "bg-blue-500"   : "bg-pink-500"
-                            }`}
-                            style={{ width: `${pct}%` }}
-                          />
+                        <div style={{ height: 4, background: "rgba(0,0,0,0.06)", borderRadius: 999, overflow: "hidden" }}>
+                          <div style={{ height: "100%", borderRadius: 999, background: meta?.color ?? "#9333ea", width: `${pct}%`, transition: "width 0.6s ease" }} />
                         </div>
                       </div>
                     );
@@ -132,47 +125,46 @@ export default function ProfilePage() {
             }
           </div>
 
-          <div className={CARD + " p-5"}>
-            <p className={`${LABEL} mb-3`}>Бүртгэлийн огноо</p>
-            <p className="text-sm text-white/60 font-sans">
+          <div style={{ ...card, padding: 18 }}>
+            <p style={{ ...labelStyle, marginBottom: 10 }}>Бүртгэлийн огноо</p>
+            <p style={{ fontFamily: F, fontSize: "0.9rem", fontWeight: 600, color: "#3a3a3c" }}>
               {data?.user.createdAt ? fmt(data.user.createdAt) : "—"}
             </p>
           </div>
         </div>
 
-        {/* ── Right col: payment history ── */}
-        <div className="lg:col-span-2">
-          <p className={`${LABEL} mb-4`}>Төлбөрийн түүх</p>
+        {/* Right col */}
+        <div style={{ gridColumn: "span 2" }} className="lg:col-span-2">
+          <p style={{ ...labelStyle, marginBottom: 14 }}>Төлбөрийн түүх</p>
 
           {isLoading ? (
-            <div className="space-y-3">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className={`${CARD} h-16 animate-pulse`} />
-              ))}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[...Array(4)].map((_, i) => <div key={i} style={{ ...card, height: 64, animation: "pulse 1.5s infinite" }} />)}
             </div>
           ) : !data?.payments.length ? (
-            <div className={`${CARD} p-8 text-center`}>
-              <p className="text-white/30 font-sans text-sm">Одоогоор төлбөрийн түүх байхгүй байна.</p>
-              <p className="text-white/20 font-sans text-xs mt-2">Шинжилгээ хийхэд л энд харагдана.</p>
+            <div style={{ ...card, padding: 40, textAlign: "center" }}>
+              <p style={{ fontFamily: F, fontSize: "0.9rem", color: "#8e8e93" }}>Одоогоор төлбөрийн түүх байхгүй байна.</p>
+              <p style={{ fontFamily: F, fontSize: "0.82rem", color: "#aeaeb2", marginTop: 6 }}>Шинжилгээ хийхэд л энд харагдана.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {data.payments.map((p) => {
                 const feat = FEATURE[p.type];
+                const statusStyle = STATUS_STYLE[p.status] ?? { color: "#8e8e93", background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.08)" };
                 return (
-                  <div key={p.invoiceId} className={`${CARD} px-5 py-4 flex items-center justify-between gap-4 hover:bg-white/[0.06] transition-all`}>
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className={`text-sm shrink-0 ${feat?.color ?? "text-white/40"}`}>{feat?.icon ?? "◇"}</span>
-                      <div className="min-w-0">
-                        <p className="text-sm text-white font-sans truncate">{feat?.label ?? p.type}</p>
-                        <p className="text-xs text-white/30 font-sans">{fmt(p.createdAt)}</p>
+                  <div key={p.invoiceId} style={{ ...card, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                      <span style={{ fontSize: "1rem", flexShrink: 0, color: feat?.color ?? "#8e8e93" }}>{feat?.icon ?? "◇"}</span>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontFamily: F, fontSize: "0.87rem", fontWeight: 600, color: "#1c1c1e", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{feat?.label ?? p.type}</p>
+                        <p style={{ fontFamily: F, fontSize: "0.75rem", color: "#8e8e93", marginTop: 2 }}>{fmt(p.createdAt)}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className={`text-xs border px-2.5 py-1 rounded-full ${STATUS_STYLE[p.status] ?? "text-white/30 border-white/10"}`}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+                      <span style={{ fontFamily: F, fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.04em", padding: "4px 10px", borderRadius: 999, ...statusStyle }}>
                         {STATUS_LABEL[p.status] ?? p.status}
                       </span>
-                      <span className="text-sm font-semibold text-white">{p.amount.toLocaleString()}₮</span>
+                      <span style={{ fontFamily: F, fontSize: "0.9rem", fontWeight: 800, color: "#1c1c1e" }}>{p.amount.toLocaleString()}₮</span>
                     </div>
                   </div>
                 );

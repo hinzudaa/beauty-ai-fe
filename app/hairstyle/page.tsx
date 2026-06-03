@@ -5,10 +5,11 @@ import { analyzeHairstyle, HairstyleResult } from "@/apis/hairstyle";
 import { fileToDataUrl } from "@/apis/analyze";
 import { createInvoice, checkPayment, InvoiceResponse, QPayUrl } from "@/apis/payment";
 import { tokenStore } from "@/utils/request";
+import { photoStore } from "@/utils/photoStore";
 
-const BADGE = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.06] border border-white/[0.1] text-white/60 text-[0.68rem] tracking-[0.14em] uppercase font-medium font-sans";
-const LABEL = "text-[0.68rem] tracking-[0.18em] uppercase font-medium text-white/30 font-sans";
-const CARD  = "bg-white/[0.04] border border-white/[0.07] rounded-[20px] backdrop-blur-xl";
+const F = "var(--font-montserrat), 'Helvetica Neue', Arial, sans-serif";
+const card: React.CSSProperties = { background: "#fff", border: "1px solid rgba(0,0,0,0.07)", borderRadius: 18, boxShadow: "0 2px 14px rgba(0,0,0,0.05)" };
+const labelStyle: React.CSSProperties = { fontFamily: F, fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8e8e93" };
 
 type Step = "upload" | "payment" | "analyzing" | "result";
 
@@ -22,32 +23,30 @@ export default function HairstylePage() {
   const [error, setError]     = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function handleFile(file: File) {
-    setPreview(URL.createObjectURL(file));
-    setDataUrl(await fileToDataUrl(file));
-    setResult(null); setStep("upload"); setError(null); setInvoice(null);
-  }
+  // auto-load from homepage upload
+  useEffect(() => {
+    const stored = photoStore.get();
+    if (stored && !preview) {
+      setPreview(stored.preview);
+      setDataUrl(stored.dataUrl);
+    }
+  }, []);
+
+  async function handleFile(file: File) { setPreview(URL.createObjectURL(file)); setDataUrl(await fileToDataUrl(file)); setResult(null); setStep("upload"); setError(null); setInvoice(null); }
 
   async function handleStart() {
     if (!dataUrl) return;
     if (!tokenStore.get()) { setError("Эхлээд нэвтэрнэ үү"); return; }
     setError(null);
-    try {
-      const inv = await createInvoice("hairstyle");
-      setInvoice(inv); setStep("payment");
-    } catch (err) { setError(err instanceof Error ? err.message : "Алдаа гарлаа"); }
+    try { const inv = await createInvoice("hairstyle"); setInvoice(inv); setStep("payment"); }
+    catch (err) { setError(err instanceof Error ? err.message : "Алдаа гарлаа"); }
   }
 
   const runAnalysis = useCallback(async () => {
     if (!dataUrl) return;
     setStep("analyzing"); setError(null);
-    try {
-      const res = await analyzeHairstyle(dataUrl);
-      setResult(res); setStep("result");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Алдаа гарлаа");
-      setStep("upload");
-    }
+    try { const res = await analyzeHairstyle(dataUrl); setResult(res); setStep("result"); }
+    catch (err) { setError(err instanceof Error ? err.message : "Алдаа гарлаа"); setStep("upload"); }
   }, [dataUrl]);
 
   useEffect(() => {
@@ -55,10 +54,8 @@ export default function HairstylePage() {
     let cancelled = false;
     async function poll() {
       if (cancelled || !invoice) return;
-      try {
-        const status = await checkPayment(invoice.invoiceId);
-        if (status.paid) { if (!cancelled) runAnalysis(); return; }
-      } catch { /* keep polling */ }
+      try { const s = await checkPayment(invoice.invoiceId); if (s.paid) { if (!cancelled) runAnalysis(); return; } }
+      catch { /* keep polling */ }
       if (!cancelled) timer = setTimeout(poll, 3_000);
     }
     let timer: ReturnType<typeof setTimeout> = setTimeout(poll, 3_000);
@@ -66,151 +63,145 @@ export default function HairstylePage() {
   }, [step, invoice, runAnalysis]);
 
   return (
-    <div className="min-h-screen px-6 md:px-12 lg:px-20 pt-16 pb-24">
+    <div style={{ minHeight: "100vh", padding: "64px 24px 96px", fontFamily: F }} className="md:px-12 lg:px-20">
 
-      {/* ── HERO ── */}
-      <section className="mb-16">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
-          <div className="max-w-2xl">
-            <span className={BADGE}>✦ &nbsp;03 · Үс · Грим</span>
-            <h1 className="mt-5" style={{ fontSize: "clamp(3rem, 6vw, 5rem)", letterSpacing: "-0.03em", lineHeight: 1.04 }}>
-              Үс засал &<br />
-              <span className="text-white/80">Грим</span>
+      {/* Hero */}
+      <section style={{ marginBottom: 56 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 24 }} className="md:flex-row md:items-end md:justify-between">
+          <div style={{ maxWidth: 560 }}>
+            <span style={{ ...labelStyle, display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 13px", borderRadius: 999, background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.2)", color: "#a855f7" }}>
+              ✦ &nbsp;03 · Үс · Грим
+            </span>
+            <h1 style={{ fontFamily: F, fontSize: "clamp(2.6rem,6vw,4.5rem)", fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.06, color: "#1c1c1e", marginTop: 20 }}>
+              Үс засал &<br /><span style={{ color: "#6e6e73", fontWeight: 700 }}>Грим</span>
             </h1>
-            <p className="mt-5 text-base text-white/55 font-sans max-w-sm" style={{ lineHeight: 1.8 }}>
+            <p style={{ marginTop: 16, fontSize: "1rem", fontWeight: 500, color: "#6e6e73", lineHeight: 1.75, maxWidth: 360 }}>
               Зургаа upload хийж нүүрний хэлбэрт тохирсон үс засал, грим зөвлөмж авах.
             </p>
           </div>
-          <div className="shrink-0 flex flex-col items-start md:items-end gap-1 pb-1">
-            <p className="text-3xl font-kenoky text-white">07</p>
-            <p className={LABEL}>Зөвлөмжийн тоо</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-end" }}>
+            <p style={{ fontFamily: F, fontSize: "2.5rem", fontWeight: 800, color: "#1c1c1e", lineHeight: 1 }}>07</p>
+            <p style={labelStyle}>Зөвлөмжийн тоо</p>
           </div>
         </div>
-        <div className="mt-10 h-px w-full bg-gradient-to-r from-white/20 via-white/5 to-transparent" />
+        <div style={{ marginTop: 36, height: 1, background: "rgba(0,0,0,0.07)" }} />
       </section>
 
-      {/* ── SPLIT ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
 
         {/* LEFT — upload */}
-        <div className="space-y-4">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div
-            className={`rounded-[24px] cursor-pointer transition-all overflow-hidden ${
-              preview
-                ? "border border-white/[0.14] bg-white/[0.04]"
-                : "border border-dashed border-white/[0.1] bg-white/[0.02] hover:border-white/[0.2] hover:bg-white/[0.04]"
-            }`}
-            style={{ minHeight: "22rem" }}
+            style={{
+              borderRadius: 20, minHeight: "22rem", cursor: "pointer", overflow: "hidden",
+              ...(preview
+                ? { border: "1px solid rgba(168,85,247,0.2)", background: "rgba(168,85,247,0.03)" }
+                : { border: "2px dashed rgba(0,0,0,0.1)", background: "rgba(0,0,0,0.01)" }),
+            }}
             onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.type.startsWith("image/")) handleFile(f); }}
             onDragOver={(e) => e.preventDefault()}
             onClick={() => inputRef.current?.click()}
           >
-            <input ref={inputRef} type="file" accept="image/*" className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+            <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
             {preview ? (
-              <div className="flex flex-col items-center justify-center gap-5 p-10 h-full" style={{ minHeight: "22rem" }}>
-                <div className="relative">
-                  <Image src={preview} alt="preview" width={220} height={220}
-                    className="object-cover rounded-2xl border border-white/[0.12] shadow-[0_0_60px_rgba(168,100,255,0.12)]" />
-                  <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-lg">
-                    <span className="text-black text-xs font-bold">✦</span>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, padding: 40, minHeight: "22rem" }}>
+                <div style={{ position: "relative" }}>
+                  <Image src={preview} alt="preview" width={220} height={220} style={{ objectFit: "cover", borderRadius: 16, border: "1px solid rgba(0,0,0,0.08)" }} />
+                  <div style={{ position: "absolute", bottom: -8, right: -8, width: 32, height: 32, borderRadius: "50%", background: "#a855f7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ color: "#fff", fontSize: "0.7rem" }}>✦</span>
                   </div>
                 </div>
-                <p className="text-sm text-white/30 font-sans" style={{ letterSpacing: "0.06em" }}>Дахин дарж солих</p>
+                <p style={{ ...labelStyle, color: "#aeaeb2" }}>Дахин дарж солих</p>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center gap-5 p-14" style={{ minHeight: "22rem" }}>
-                <div className="relative">
-                  <div className="w-20 h-20 rounded-full flex items-center justify-center bg-white/[0.06] border border-white/[0.12]">
-                    <span className="text-white/70 text-3xl">✦</span>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, padding: 56, minHeight: "22rem" }}>
+                <div style={{ position: "relative" }}>
+                  <div style={{ width: 72, height: 72, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.15)" }}>
+                    <span style={{ color: "#a855f7", fontSize: "1.8rem" }}>✦</span>
                   </div>
-                  <div className="absolute inset-0 rounded-full bg-white/[0.08] animate-ping" style={{ animationDuration: "2.5s" }} />
                 </div>
-                <div className="text-center">
-                  <p className="text-base text-white/70 font-sans mb-1.5">Зураг чирж тавих эсвэл дарах</p>
-                  <p className="text-sm text-white/30 font-sans">Урд тал харсан, тодорхой зураг хамгийн сайн</p>
+                <div style={{ textAlign: "center" }}>
+                  <p style={{ fontFamily: F, fontSize: "1rem", fontWeight: 600, color: "#3a3a3c", marginBottom: 6 }}>Зураг чирж тавих эсвэл дарах</p>
+                  <p style={{ fontFamily: F, fontSize: "0.84rem", color: "#aeaeb2" }}>Урд тал харсан, тодорхой зураг хамгийн сайн</p>
                 </div>
               </div>
             )}
           </div>
 
           {preview && step === "upload" && (
-            <button onClick={handleStart}
-              className="w-full bg-white text-black rounded-full font-semibold py-3.5 hover:scale-[1.02] hover:opacity-90 transition-all shadow-[0_0_40px_rgba(255,255,255,0.15)] font-sans text-sm"
-              style={{ letterSpacing: "0.1em" }}>
+            <button onClick={handleStart} style={{ width: "100%", background: "#1c1c1e", color: "#fff", borderRadius: 999, fontFamily: F, fontWeight: 700, fontSize: "0.9rem", padding: "14px 0", border: "none", cursor: "pointer", letterSpacing: "0.06em", boxShadow: "0 4px 16px rgba(0,0,0,0.18)" }}>
               Шинжлэх →
             </button>
           )}
 
           {step === "payment" && invoice && (
-            <div className={`${CARD} p-6 text-center`}>
-              <p className={`${LABEL} mb-2`}>QPay төлбөр</p>
-              <p className="text-2xl font-kenoky text-white mb-1">{invoice.amount.toLocaleString()}₮</p>
-              <p className="text-xs text-white/30 font-sans mb-5">Үс засал & Грим шинжилгээ</p>
+            <div style={{ ...card, padding: 24, textAlign: "center" }}>
+              <p style={{ ...labelStyle, marginBottom: 8 }}>QPay төлбөр</p>
+              <p style={{ fontFamily: F, fontSize: "1.8rem", fontWeight: 800, color: "#1c1c1e", marginBottom: 4 }}>{invoice.amount.toLocaleString()}₮</p>
+              <p style={{ fontFamily: F, fontSize: "0.8rem", color: "#8e8e93", marginBottom: 20 }}>Үс засал & Грим шинжилгээ</p>
               {invoice.qrImage && (
-                <div className="flex justify-center mb-5">
-                  <div className="bg-white p-3 rounded-2xl inline-block">
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+                  <div style={{ background: "#fff", padding: 12, borderRadius: 16, border: "1px solid rgba(0,0,0,0.07)" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`data:image/png;base64,${invoice.qrImage}`} alt="QPay QR" width={180} height={180} className="rounded-xl block" />
+                    <img src={`data:image/png;base64,${invoice.qrImage}`} alt="QPay QR" width={180} height={180} style={{ borderRadius: 8, display: "block" }} />
                   </div>
                 </div>
               )}
-              <div className="flex items-center gap-2 justify-center mb-4">
-                {[0,1,2].map((i) => <span key={i} className="w-1.5 h-1.5 rounded-full bg-gold animate-dot-blink inline-block" style={{ animationDelay: `${i * 0.2}s` }} />)}
-                <span className="text-xs text-white/35 font-sans">Хүлээж байна...</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center", marginBottom: 16 }}>
+                {[0,1,2].map((i) => <span key={i} className="animate-dot-blink" style={{ width: 6, height: 6, borderRadius: "50%", background: "#a855f7", display: "inline-block", animationDelay: `${i*0.2}s` }} />)}
+                <span style={{ fontFamily: F, fontSize: "0.8rem", color: "#8e8e93" }}>Хүлээж байна...</span>
               </div>
               {invoice.urls?.length > 0 && (
-                <div className="grid grid-cols-2 gap-2">
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   {invoice.urls.slice(0, 6).map((u: QPayUrl) => (
                     <a key={u.name} href={u.link} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-2 rounded-[12px] bg-white/[0.04] border border-white/[0.07] hover:bg-white/[0.08] transition-all">
+                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", borderRadius: 12, background: "#f5f5f7", border: "1px solid rgba(0,0,0,0.07)", textDecoration: "none" }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      {u.logo && <img src={u.logo} alt={u.name} width={22} height={22} className="rounded-md shrink-0" />}
-                      <span className="text-xs text-white/50 truncate">{u.name}</span>
+                      {u.logo && <img src={u.logo} alt={u.name} width={22} height={22} style={{ borderRadius: 6, flexShrink: 0 }} />}
+                      <span style={{ fontFamily: F, fontSize: "0.75rem", color: "#3a3a3c", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.name}</span>
                     </a>
                   ))}
                 </div>
               )}
-              <button onClick={() => { setStep("upload"); setInvoice(null); }} className="mt-4 w-full py-2.5 text-xs text-white/30 border border-white/[0.06] rounded-full hover:text-white/50 transition-all">← Буцах</button>
+              <button onClick={() => { setStep("upload"); setInvoice(null); }} style={{ marginTop: 16, width: "100%", padding: "11px 0", background: "transparent", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 999, fontFamily: F, fontSize: "0.84rem", color: "#8e8e93", cursor: "pointer" }}>← Буцах</button>
             </div>
           )}
 
           {step === "analyzing" && (
-            <div className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] p-10 text-center`}>
-              <div className="flex gap-2.5 justify-center mb-5">
-                {[0,1,2].map((i) => <span key={i} className="w-2 h-2 rounded-full inline-block bg-white animate-dot-blink" style={{ animationDelay: `${i * 0.18}s` }} />)}
+            <div style={{ ...card, padding: 40, textAlign: "center" }}>
+              <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 16 }}>
+                {[0,1,2].map((i) => <span key={i} className="animate-dot-blink" style={{ width: 8, height: 8, borderRadius: "50%", background: "#a855f7", display: "inline-block", animationDelay: `${i*0.18}s` }} />)}
               </div>
-              <p className="text-base text-white/70 font-sans">Шинжилж байна...</p>
+              <p style={{ fontFamily: F, fontSize: "1rem", fontWeight: 600, color: "#1c1c1e" }}>Шинжилж байна...</p>
             </div>
           )}
 
-          {error && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">{error}</p>}
+          {error && <p style={{ fontFamily: F, fontSize: "0.8rem", color: "#ef4444", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 12, padding: "10px 16px" }}>{error}</p>}
 
           {step === "result" && result && (
             <button onClick={() => { setPreview(null); setDataUrl(null); setResult(null); setStep("upload"); }}
-              className="w-full py-3.5 bg-white/[0.06] text-white/60 border border-white/[0.08] rounded-full hover:text-white hover:border-white/[0.18] transition-all font-sans text-sm"
-              style={{ letterSpacing: "0.08em" }}>
+              style={{ width: "100%", padding: "13px 0", background: "transparent", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 999, fontFamily: F, fontSize: "0.87rem", fontWeight: 600, color: "#6e6e73", cursor: "pointer" }}>
               Дахин шинжлэх
             </button>
           )}
         </div>
 
-        {/* RIGHT — info or results */}
+        {/* RIGHT */}
         {step === "upload" && !result && (
-          <div className="space-y-4 lg:pt-2">
-            <p className={`${LABEL} mb-4`}>Юу авах вэ</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <p style={{ ...labelStyle, marginBottom: 12 }}>Юу авах вэ</p>
             {[
               { icon: "◈", label: "Үс засал",  desc: "Нүүрний хэлбэрт тохирсон 4 үс заслын зөвлөмж" },
               { icon: "◉", label: "Грим look",  desc: "Арьсны тонд нийцсэн 3 грим стиль + өнгөний палет" },
               { icon: "✦", label: "Хувийн гид", desc: "Таны нүүрний онцлогт тулгуурласан зөвлөмж" },
             ].map((f) => (
-              <div key={f.label} className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] p-5 flex gap-4 items-start hover:bg-white/[0.07] hover:border-white/[0.14] transition-all group`}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/[0.06] border border-white/[0.1] shrink-0 transition-colors">
-                  <span className="text-white/60 text-sm">{f.icon}</span>
+              <div key={f.label} style={{ ...card, display: "flex", gap: 16, padding: 18 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(168,85,247,0.07)", border: "1px solid rgba(168,85,247,0.12)", flexShrink: 0 }}>
+                  <span style={{ color: "#a855f7", fontSize: "1rem" }}>{f.icon}</span>
                 </div>
                 <div>
-                  <p className="text-sm text-white font-sans font-medium mb-1">{f.label}</p>
-                  <p className="text-sm text-white/55 font-sans" style={{ lineHeight: 1.6 }}>{f.desc}</p>
+                  <p style={{ fontFamily: F, fontSize: "0.9rem", fontWeight: 700, color: "#1c1c1e", marginBottom: 4 }}>{f.label}</p>
+                  <p style={{ fontFamily: F, fontSize: "0.84rem", color: "#6e6e73", lineHeight: 1.6 }}>{f.desc}</p>
                 </div>
               </div>
             ))}
@@ -218,59 +209,54 @@ export default function HairstylePage() {
         )}
 
         {step === "result" && result && (
-          <div className="animate-fade-up lg:pt-2 space-y-4">
-            {/* Face shape badge */}
-            <div className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] flex items-center gap-4 p-5`}>
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/[0.06] border border-white/[0.1] shrink-0">
-                <span className="text-white/60 text-sm">◈</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }} className="anim-fade-up">
+            <div style={{ ...card, display: "flex", alignItems: "center", gap: 16, padding: 18 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(168,85,247,0.07)", border: "1px solid rgba(168,85,247,0.12)", flexShrink: 0 }}>
+                <span style={{ color: "#a855f7" }}>◈</span>
               </div>
               <div>
-                <p className={LABEL}>Нүүрний хэлбэр</p>
-                <p className="text-base text-white font-sans mt-1">{result.faceShape} нүүр</p>
+                <p style={labelStyle}>Нүүрний хэлбэр</p>
+                <p style={{ fontFamily: F, fontSize: "1rem", fontWeight: 700, color: "#1c1c1e", marginTop: 4 }}>{result.faceShape} нүүр</p>
               </div>
             </div>
 
-            {/* Tab buttons */}
-            <div className="flex gap-2">
+            <div style={{ display: "flex", gap: 8 }}>
               {(["hair", "makeup"] as const).map((t) => (
                 <button key={t} onClick={() => setTab(t)}
-                  className={`px-6 py-2.5 rounded-full text-sm font-sans font-medium transition-all ${
-                    tab === t
-                      ? "bg-white text-black"
-                      : "bg-white/[0.04] text-white/50 border border-white/[0.08] hover:text-white/80"
-                  }`}>
+                  style={{ fontFamily: F, fontSize: "0.87rem", fontWeight: 600, padding: "9px 20px", borderRadius: 999, border: "1px solid", cursor: "pointer", transition: "all 0.15s",
+                    background: tab === t ? "#1c1c1e" : "#fff",
+                    color: tab === t ? "#fff" : "#6e6e73",
+                    borderColor: tab === t ? "#1c1c1e" : "rgba(0,0,0,0.1)" }}>
                   {t === "hair" ? "Үс засал" : "Грим"}
                 </button>
               ))}
             </div>
 
             {tab === "hair" && (
-              <div className="space-y-3">
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {result.hair.map((h) => (
-                  <div key={h.name} className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] p-5 hover:bg-white/[0.07] hover:border-white/[0.14] transition-all`}>
-                    <div className="flex items-start justify-between mb-2.5">
-                      <h3 style={{ fontSize: "0.95rem", letterSpacing: "-0.01em", fontFamily: "var(--font-kenoky)", fontWeight: 300, color: "rgba(255,255,255,0.9)" }}>{h.name}</h3>
-                      <span className="text-[0.62rem] text-white/30 font-sans px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.07] shrink-0 ml-3">{h.length}</span>
+                  <div key={h.name} style={{ ...card, padding: 18 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
+                      <h3 style={{ fontFamily: F, fontSize: "0.95rem", fontWeight: 700, color: "#1c1c1e" }}>{h.name}</h3>
+                      <span style={{ fontFamily: F, fontSize: "0.68rem", fontWeight: 600, color: "#8e8e93", padding: "4px 10px", borderRadius: 999, background: "#f5f5f7", border: "1px solid rgba(0,0,0,0.06)", flexShrink: 0, marginLeft: 12 }}>{h.length}</span>
                     </div>
-                    <p className="text-sm text-white/55 font-sans" style={{ lineHeight: 1.7 }}>{h.desc}</p>
+                    <p style={{ fontFamily: F, fontSize: "0.87rem", color: "#6e6e73", lineHeight: 1.65 }}>{h.desc}</p>
                   </div>
                 ))}
               </div>
             )}
 
             {tab === "makeup" && (
-              <div className="space-y-3">
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {result.makeup.map((m) => (
-                  <div key={m.name} className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] p-5 hover:bg-white/[0.07] hover:border-white/[0.14] transition-all`}>
-                    <div className="flex items-center justify-between mb-2.5">
-                      <h3 style={{ fontSize: "0.95rem", letterSpacing: "-0.01em", fontFamily: "var(--font-kenoky)", fontWeight: 300, color: "rgba(255,255,255,0.9)" }}>{m.name}</h3>
-                      <div className="flex gap-1.5">
-                        {m.colors.map((c) => (
-                          <div key={c} className="w-5 h-5 rounded-full border border-white/10" style={{ background: c }} />
-                        ))}
+                  <div key={m.name} style={{ ...card, padding: 18 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                      <h3 style={{ fontFamily: F, fontSize: "0.95rem", fontWeight: 700, color: "#1c1c1e" }}>{m.name}</h3>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {m.colors.map((c) => <div key={c} style={{ width: 20, height: 20, borderRadius: "50%", border: "1px solid rgba(0,0,0,0.1)", background: c }} />)}
                       </div>
                     </div>
-                    <p className="text-sm text-white/55 font-sans" style={{ lineHeight: 1.7 }}>{m.desc}</p>
+                    <p style={{ fontFamily: F, fontSize: "0.87rem", color: "#6e6e73", lineHeight: 1.65 }}>{m.desc}</p>
                   </div>
                 ))}
               </div>

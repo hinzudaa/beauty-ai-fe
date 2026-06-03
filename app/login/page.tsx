@@ -6,6 +6,8 @@ import { otpStart, otpVerify } from "@/apis";
 import { ApiError, tokenStore } from "@/utils/request";
 import type { OtpStartResponse, AuthResponse } from "@/types/auth";
 
+const F = "var(--font-montserrat), 'Helvetica Neue', Arial, sans-serif";
+
 export default function LoginPage() {
   const [step, setStep]       = useState<"phone" | "otp">("phone");
   const [phone, setPhone]     = useState("");
@@ -15,209 +17,148 @@ export default function LoginPage() {
 
   const { data: secondsLeft = 0 } = useSWR(
     session ? ["countdown", session.expiresAt] : null,
-    ([, expiresAt]: [string, string]) =>
-      Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)),
+    ([, expiresAt]: [string, string]) => Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)),
     { refreshInterval: 1000, revalidateOnFocus: false }
   );
 
   useEffect(() => {
     if (step !== "otp" || !session) return;
-
-    const sessionId  = session.sessionId;
-    const expiresAt  = new Date(session.expiresAt).getTime();
-    let cancelled    = false;
+    const sessionId = session.sessionId;
+    const expiresAt = new Date(session.expiresAt).getTime();
+    let cancelled = false;
 
     async function check() {
       if (cancelled) return;
       try {
         const data = await otpVerify(sessionId);
-
         if (cancelled) return;
-
-        if ("token" in data) {
-          const res = data as AuthResponse;
-          tokenStore.set(res.token);
-          window.location.href = "/";
-          return;
-        }
-
-        if (Date.now() < expiresAt + 2_000) {
-          timer = setTimeout(check, 3_000);
-        } else {
-          setError("OTP хугацаа дууссан. Дахин оролдоно уу.");
-          setStep("phone");
-          setSession(null);
-        }
+        if ("token" in data) { const res = data as AuthResponse; tokenStore.set(res.token); window.location.href = "/"; return; }
+        if (Date.now() < expiresAt + 2_000) { timer = setTimeout(check, 3_000); }
+        else { setError("OTP хугацаа дууссан. Дахин оролдоно уу."); setStep("phone"); setSession(null); }
       } catch (err) {
         if (cancelled) return;
-        if (err instanceof ApiError && (err.status === 404 || err.status === 410)) {
-          setError("OTP хугацаа дууссан. Дахин оролдоно уу.");
-          setStep("phone");
-          setSession(null);
-          return;
-        }
-        if (Date.now() < expiresAt + 2_000) {
-          timer = setTimeout(check, 3_000);
-        }
+        if (err instanceof ApiError && (err.status === 404 || err.status === 410)) { setError("OTP хугацаа дууссан. Дахин оролдоно уу."); setStep("phone"); setSession(null); return; }
+        if (Date.now() < expiresAt + 2_000) { timer = setTimeout(check, 3_000); }
       }
     }
 
     let timer: ReturnType<typeof setTimeout> = setTimeout(check, 3_000);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [step, session]);
 
   async function handleSend(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    if (!/^\d{8,16}$/.test(phone)) {
-      setError("Утасны дугаар 8–16 оронтой байх ёстой");
-      return;
-    }
+    e.preventDefault(); setError("");
+    if (!/^\d{8,16}$/.test(phone)) { setError("Утасны дугаар 8–16 оронтой байх ёстой"); return; }
     setBusy(true);
-    try {
-      const res = await otpStart(phone);
-      setSession(res);
-      setStep("otp");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Алдаа гарлаа");
-    } finally {
-      setBusy(false);
-    }
+    try { const res = await otpStart(phone); setSession(res); setStep("otp"); }
+    catch (err) { setError(err instanceof Error ? err.message : "Алдаа гарлаа"); }
+    finally { setBusy(false); }
   }
 
-  function handleRetry() {
-    setStep("phone");
-    setSession(null);
-    setError("");
-  }
+  function handleRetry() { setStep("phone"); setSession(null); setError(""); }
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-sm">
+  const inputStyle: React.CSSProperties = {
+    width: "100%", fontFamily: F, fontSize: "0.95rem", fontWeight: 500,
+    background: "#fff", border: "1px solid rgba(0,0,0,0.12)", borderRadius: 14,
+    padding: "14px 18px", color: "#1c1c1e", outline: "none",
+    boxSizing: "border-box", boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+  };
 
-        <div className="flex items-center justify-center gap-2 mb-10">
-          <span className="text-gold text-base">✦</span>
-          <span className="font-coffekan font-bold text-white text-2xl" style={{ letterSpacing: "0.04em" }}>
-            Beauty AI
-          </span>
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", fontFamily: F, background: "#f2f2f7" }}>
+      <div style={{ width: "100%", maxWidth: 380 }}>
+
+        {/* Logo */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 40 }}>
+          <span style={{ color: "#9333ea", fontSize: "1rem" }}>✦</span>
+          <span style={{ fontFamily: F, fontWeight: 800, fontSize: "1.3rem", letterSpacing: "-0.02em", color: "#1c1c1e" }}>Beauty AI</span>
         </div>
 
-        {step === "phone" && (
-          <>
-            <div className="text-center mb-8">
-              <h1 className="text-3xl" style={{ letterSpacing: "-0.02em", lineHeight: 1.1 }}>
-                Нэвтрэх
-              </h1>
-              <p className="mt-2 text-sm text-white/40 font-sans">
-                Утасны дугаараа оруулна уу
-              </p>
-            </div>
+        {/* Card */}
+        <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.95)", borderRadius: 24, boxShadow: "0 4px 32px rgba(0,0,0,0.08)", padding: "36px 32px" }}>
 
-            <form onSubmit={handleSend} className="space-y-3" noValidate>
-              <div>
-                <label className="block text-[0.65rem] tracking-[0.16em] uppercase text-white/30 font-sans mb-2">
-                  Утасны дугаар
-                </label>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  placeholder="99001234"
-                  value={phone}
-                  onChange={(e) => { setPhone(e.target.value.replace(/\D/g, "")); setError(""); }}
-                  className="w-full bg-white/[0.04] border border-white/[0.07] rounded-[14px] px-4 py-3.5 text-sm text-white font-sans outline-none placeholder:text-white/25 focus:border-white/[0.25] focus:bg-white/[0.06] transition-all"
-                  autoComplete="tel"
-                  maxLength={16}
-                  autoFocus
-                />
+          {step === "phone" && (
+            <>
+              <div style={{ textAlign: "center", marginBottom: 28 }}>
+                <h1 style={{ fontFamily: F, fontSize: "1.8rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#1c1c1e", lineHeight: 1.1 }}>Нэвтрэх</h1>
+                <p style={{ marginTop: 8, fontFamily: F, fontSize: "0.9rem", fontWeight: 500, color: "#8e8e93" }}>Утасны дугаараа оруулна уу</p>
               </div>
 
-              {error && (
-                <p className="text-xs text-red-400 font-sans py-2 px-3 rounded-xl bg-red-500/[0.08] border border-red-500/[0.15]">
-                  {error}
+              <form onSubmit={handleSend} style={{ display: "flex", flexDirection: "column", gap: 12 }} noValidate>
+                <div>
+                  <label style={{ fontFamily: F, fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8e8e93", display: "block", marginBottom: 8 }}>
+                    Утасны дугаар
+                  </label>
+                  <input
+                    type="tel" inputMode="numeric" placeholder="99001234"
+                    value={phone}
+                    onChange={(e) => { setPhone(e.target.value.replace(/\D/g, "")); setError(""); }}
+                    style={inputStyle}
+                    autoComplete="tel" maxLength={16} autoFocus
+                  />
+                </div>
+
+                {error && <p style={{ fontFamily: F, fontSize: "0.8rem", color: "#ef4444", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 10, padding: "10px 14px" }}>{error}</p>}
+
+                <button type="submit" disabled={busy || !phone}
+                  style={{
+                    marginTop: 4, width: "100%", padding: "14px 0", borderRadius: 999,
+                    fontFamily: F, fontSize: "0.9rem", fontWeight: 700, letterSpacing: "0.04em", border: "none",
+                    cursor: busy || !phone ? "not-allowed" : "pointer",
+                    background: busy || !phone ? "rgba(0,0,0,0.08)" : "#1c1c1e",
+                    color: busy || !phone ? "#aeaeb2" : "#fff",
+                    boxShadow: busy || !phone ? "none" : "0 4px 16px rgba(0,0,0,0.18)",
+                    transition: "all 0.15s",
+                  }}>
+                  {busy ? (
+                    <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                      {[0,1,2].map((i) => <span key={i} className="animate-dot-blink" style={{ width: 6, height: 6, borderRadius: "50%", background: "#aeaeb2", display: "inline-block", animationDelay: `${i*0.15}s` }} />)}
+                    </span>
+                  ) : "Код авах →"}
+                </button>
+              </form>
+            </>
+          )}
+
+          {step === "otp" && session && (
+            <>
+              <div style={{ textAlign: "center", marginBottom: 24 }}>
+                <h1 style={{ fontFamily: F, fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#1c1c1e", lineHeight: 1.15 }}>SMS илгээнэ үү</h1>
+                <p style={{ marginTop: 8, fontFamily: F, fontSize: "0.9rem", fontWeight: 500, color: "#8e8e93" }}>
+                  <span style={{ color: "#1c1c1e", fontWeight: 700 }}>{phone}</span> дугаараас
                 </p>
-              )}
+              </div>
 
-              <button
-                type="submit"
-                disabled={busy || !phone}
-                className={`w-full mt-1 py-3.5 rounded-full text-sm font-semibold font-sans transition-all ${
-                  busy || !phone
-                    ? "bg-white/20 text-white/40 cursor-not-allowed"
-                    : "bg-white text-black hover:scale-[1.02] hover:opacity-90 shadow-[0_0_40px_rgba(255,255,255,0.15)]"
-                }`}
-                style={{ letterSpacing: "0.06em" }}>
-                {busy ? (
-                  <span className="flex items-center justify-center gap-1.5">
-                    {[0, 1, 2].map((i) => (
-                      <span key={i} className="w-1.5 h-1.5 rounded-full bg-white/50 animate-dot-blink inline-block"
-                        style={{ animationDelay: `${i * 0.15}s` }} />
-                    ))}
-                  </span>
-                ) : "Код авах →"}
+              <div style={{ background: "#f5f5f7", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 16, padding: 20, marginBottom: 16, textAlign: "center" }}>
+                <p style={{ fontFamily: F, fontSize: "0.9rem", fontWeight: 500, color: "#3a3a3c", lineHeight: 1.7, marginBottom: 16 }}>
+                  {session.displayInstruction}
+                </p>
+                <a href={session.smsUri}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#1c1c1e", color: "#fff", fontFamily: F, fontSize: "0.9rem", fontWeight: 700, padding: "12px 24px", borderRadius: 999, textDecoration: "none", boxShadow: "0 4px 14px rgba(0,0,0,0.2)" }}>
+                  <span>✉</span> SMS нээх
+                </a>
+                <p style={{ marginTop: 12, fontFamily: F, fontSize: "0.72rem", color: "#aeaeb2" }}>Гар утас дээр дарна уу</p>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 16 }}>
+                <span style={{ display: "flex", gap: 6 }}>
+                  {[0,1,2].map((i) => <span key={i} className="animate-dot-blink" style={{ width: 6, height: 6, borderRadius: "50%", background: "#9333ea", display: "inline-block", animationDelay: `${i*0.2}s` }} />)}
+                </span>
+                <span style={{ fontFamily: F, fontSize: "0.82rem", color: "#8e8e93" }}>Хүлээж байна...</span>
+                {secondsLeft > 0 && <span style={{ fontFamily: F, fontSize: "0.8rem", color: "#aeaeb2" }}>{fmt(secondsLeft)}</span>}
+              </div>
+
+              {error && <p style={{ fontFamily: F, fontSize: "0.8rem", color: "#ef4444", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 10, padding: "10px 14px", textAlign: "center", marginBottom: 12 }}>{error}</p>}
+
+              <button onClick={handleRetry}
+                style={{ width: "100%", padding: "12px 0", background: "transparent", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 999, fontFamily: F, fontSize: "0.87rem", fontWeight: 600, color: "#6e6e73", cursor: "pointer" }}>
+                ← Дугаар солих
               </button>
-            </form>
-          </>
-        )}
-
-        {step === "otp" && session && (
-          <>
-            <div className="text-center mb-8">
-              <h1 className="text-2xl" style={{ letterSpacing: "-0.02em", lineHeight: 1.15 }}>
-                SMS илгээнэ үү
-              </h1>
-              <p className="mt-2 text-sm text-white/50 font-sans">
-                <span className="text-white/80">{phone}</span> дугаараас
-              </p>
-            </div>
-
-            <div className="bg-white/[0.04] border border-white/[0.08] rounded-[20px] p-5 mb-4 text-center">
-              <p className="text-sm text-white/70 font-sans mb-4" style={{ lineHeight: 1.7 }}>
-                {session.displayInstruction}
-              </p>
-              <a
-                href={session.smsUri}
-                className="inline-flex items-center gap-2 bg-white text-black text-sm font-semibold px-6 py-3 rounded-full hover:scale-[1.02] hover:opacity-90 transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] font-sans"
-                style={{ letterSpacing: "0.04em" }}>
-                <span>✉</span> SMS нээх
-              </a>
-              <p className="mt-3 text-[0.68rem] text-white/25 font-sans">
-                Гар утас дээр дарна уу
-              </p>
-            </div>
-
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <span className="flex gap-1.5">
-                {[0, 1, 2].map((i) => (
-                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-gold animate-dot-blink inline-block"
-                    style={{ animationDelay: `${i * 0.2}s` }} />
-                ))}
-              </span>
-              <span className="text-xs text-white/35 font-sans">Хүлээж байна...</span>
-              {secondsLeft > 0 && (
-                <span className="text-xs text-white/25 font-sans">{fmt(secondsLeft)}</span>
-              )}
-            </div>
-
-            {error && (
-              <p className="text-xs text-red-400 font-sans py-2 px-3 rounded-xl bg-red-500/[0.08] border border-red-500/[0.15] text-center mb-3">
-                {error}
-              </p>
-            )}
-
-            <button
-              onClick={handleRetry}
-              className="w-full py-3 text-sm text-white/35 font-sans border border-white/[0.07] rounded-full hover:text-white/60 hover:border-white/[0.15] transition-all"
-              style={{ letterSpacing: "0.05em" }}>
-              ← Дугаар солих
-            </button>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
