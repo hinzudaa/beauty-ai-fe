@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useSyncExternalStore, ReactNode } from "react";
 import useSWR from "swr";
 import { getMe } from "@/apis";
 import { tokenStore } from "@/utils/request";
@@ -20,8 +20,17 @@ const AuthContext = createContext<AuthContextValue>({
   logout: () => {},
 });
 
+function subscribeToStorage(cb: () => void) {
+  window.addEventListener("storage", cb);
+  return () => window.removeEventListener("storage", cb);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => tokenStore.get());
+  const token = useSyncExternalStore(
+    subscribeToStorage,
+    () => tokenStore.get(),
+    () => null
+  );
 
   const { data: user, isLoading, mutate } = useSWR<IUser | null>(
     token ? "/auth/me" : null,
@@ -31,20 +40,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       shouldRetryOnError: false,
       onError: () => {
         tokenStore.clear();
-        setToken(null);
       },
     }
   );
 
   const login = (tok: string, u: IUser) => {
     tokenStore.set(tok);
-    setToken(tok);
     mutate(u, { revalidate: false });
   };
 
   const logout = () => {
     tokenStore.clear();
-    setToken(null);
     mutate(null, { revalidate: false });
   };
 

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import useSWR from "swr";
 import { useAuth } from "@/lib/AuthContext";
 import { otpStart, otpVerify } from "@/apis";
@@ -10,7 +9,6 @@ import type { OtpStartResponse, AuthResponse } from "@/types/auth";
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const router = useRouter();
 
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [phone, setPhone] = useState("");
@@ -26,13 +24,20 @@ export default function LoginPage() {
   );
 
 
-  const { data: verifyResult } = useSWR(
+  useSWR(
     step === "otp" && session ? ["otp-verify", session.sessionId] : null,
     ([, sessionId]: [string, string]) => otpVerify(sessionId),
     {
       refreshInterval: (latest) => (!latest || !("token" in latest) ? 3_000 : 0),
       revalidateOnFocus: false,
-      shouldRetryOnError: false,
+      shouldRetryOnError: (err: unknown) =>
+        !(err instanceof ApiError && (err.status === 404 || err.status === 410)),
+      onSuccess: (data) => {
+        if (!("token" in data)) return;
+        const res = data as AuthResponse;
+        login(res.token, res.user);
+        window.location.href = "/";
+      },
       onError: (err: unknown) => {
         if (err instanceof ApiError && (err.status === 410 || err.status === 404)) {
           setError("OTP хугацаа дууссан. Дахин оролдоно уу.");
@@ -42,13 +47,6 @@ export default function LoginPage() {
       },
     }
   );
-
-  useEffect(() => {
-    if (!verifyResult || !("token" in verifyResult)) return;
-    const res = verifyResult as AuthResponse;
-    login(res.token, res.user);
-    router.replace("/");
-  }, [verifyResult, login, router]);
 
 
   async function handleSend(e: React.FormEvent) {

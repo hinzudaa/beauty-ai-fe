@@ -14,11 +14,13 @@ export const tokenStore = {
     if (typeof window === "undefined") return;
     localStorage.setItem(TOKEN_KEY, token);
     document.cookie = `${TOKEN_KEY}=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+    window.dispatchEvent(new StorageEvent("storage", { key: TOKEN_KEY }));
   },
   clear: () => {
     if (typeof window === "undefined") return;
     localStorage.removeItem(TOKEN_KEY);
     document.cookie = `${TOKEN_KEY}=; path=/; max-age=0`;
+    window.dispatchEvent(new StorageEvent("storage", { key: TOKEN_KEY }));
   },
 };
 
