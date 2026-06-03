@@ -24,8 +24,8 @@ export interface PaymentStatus {
   amount: number;
 }
 
-export const createInvoice = (): Promise<InvoiceResponse> =>
-  http.post("/invoice");
+export const createInvoice = (feature: "analyze" | "outfit" | "hairstyle" = "analyze"): Promise<InvoiceResponse> =>
+  http.post("/invoice", { feature });
 
 export const checkPayment = (invoiceId: string): Promise<PaymentStatus> =>
   http.get(`/check/${encodeURIComponent(invoiceId)}`);

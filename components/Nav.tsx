@@ -9,7 +9,6 @@ const links = [
   { href: "/analyze",   label: "Шинжилгээ" },
   { href: "/outfit",    label: "Хувцас" },
   { href: "/hairstyle", label: "Үс / Грим" },
-  { href: "/makeup",    label: "Makeup" },
   { href: "/chat",      label: "AI Стилист" },
 ];
 

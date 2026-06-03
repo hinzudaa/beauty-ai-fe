@@ -1,35 +1,69 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
+import { analyzeHairstyle, HairstyleResult } from "@/apis/hairstyle";
+import { fileToDataUrl } from "@/apis/analyze";
+import { createInvoice, checkPayment, InvoiceResponse, QPayUrl } from "@/apis/payment";
+import { tokenStore } from "@/utils/request";
 
 const BADGE = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.06] border border-white/[0.1] text-white/60 text-[0.68rem] tracking-[0.14em] uppercase font-medium font-sans";
 const LABEL = "text-[0.68rem] tracking-[0.18em] uppercase font-medium text-white/30 font-sans";
 const CARD  = "bg-white/[0.04] border border-white/[0.07] rounded-[20px] backdrop-blur-xl";
 
-const MOCK = {
-  faceShape: "Зууван",
-  hair: [
-    { name: "Textured Lob",          length: "Богино-дунд", desc: "Jaw line дороос 5–8 cm урт. Зууван нүүрэнд хамгийн их тохиромжтой. Дурын текстурт ажилладаг." },
-    { name: "Curtain Bangs + Layers", length: "Урт",         desc: "Face-framing layer нэмбэл нүүрийг зөөлөн тойрогдуулна." },
-    { name: "Sleek Low Bun",          length: "Урт",         desc: "Ёслол болон ажлын үед ideal. Нүүрний бүх онцлогийг тодотгоно." },
-    { name: "Wolf Cut",               length: "Дунд-Урт",   desc: "Volume-rich. Зузаан ба дунд зузааны үсэнд хамгийн сайн." },
-  ],
-  makeup: [
-    { name: "No-Makeup Makeup", desc: "Tinted moisturizer, cream blush, clear gloss. Байгалийн гоо сайхныг онцолно.", colors: ["#e8b4a0","#d4957a","#f5e6d3"] },
-    { name: "Soft Glam",        desc: "Warm eyeshadow, defined lash line, satin lip. Ёслол болон date-д тохиромжтой.", colors: ["#c8956c","#8b5e52","#e8c4a0"] },
-    { name: "Monochromatic",    desc: "Нэг өнгийг нүд, хацар, уруул дээр — cohesive look.", colors: ["#d4a0a0","#c08080","#e8c8c8"] },
-  ],
-};
+type Step = "upload" | "payment" | "analyzing" | "result";
 
 export default function HairstylePage() {
+  const [step, setStep]       = useState<Step>("upload");
   const [preview, setPreview] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<typeof MOCK | null>(null);
-  const [tab, setTab] = useState<"hair" | "makeup">("hair");
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const [invoice, setInvoice] = useState<InvoiceResponse | null>(null);
+  const [result, setResult]   = useState<HairstyleResult | null>(null);
+  const [tab, setTab]         = useState<"hair" | "makeup">("hair");
+  const [error, setError]     = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function handleFile(file: File) { setPreview(URL.createObjectURL(file)); setResult(null); }
-  function analyze() { setLoading(true); setTimeout(() => { setLoading(false); setResult(MOCK); }, 2000); }
+  async function handleFile(file: File) {
+    setPreview(URL.createObjectURL(file));
+    setDataUrl(await fileToDataUrl(file));
+    setResult(null); setStep("upload"); setError(null); setInvoice(null);
+  }
+
+  async function handleStart() {
+    if (!dataUrl) return;
+    if (!tokenStore.get()) { setError("Эхлээд нэвтэрнэ үү"); return; }
+    setError(null);
+    try {
+      const inv = await createInvoice("hairstyle");
+      setInvoice(inv); setStep("payment");
+    } catch (err) { setError(err instanceof Error ? err.message : "Алдаа гарлаа"); }
+  }
+
+  const runAnalysis = useCallback(async () => {
+    if (!dataUrl) return;
+    setStep("analyzing"); setError(null);
+    try {
+      const res = await analyzeHairstyle(dataUrl);
+      setResult(res); setStep("result");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Алдаа гарлаа");
+      setStep("upload");
+    }
+  }, [dataUrl]);
+
+  useEffect(() => {
+    if (step !== "payment" || !invoice) return;
+    let cancelled = false;
+    async function poll() {
+      if (cancelled || !invoice) return;
+      try {
+        const status = await checkPayment(invoice.invoiceId);
+        if (status.paid) { if (!cancelled) runAnalysis(); return; }
+      } catch { /* keep polling */ }
+      if (!cancelled) timer = setTimeout(poll, 3_000);
+    }
+    let timer: ReturnType<typeof setTimeout> = setTimeout(poll, 3_000);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [step, invoice, runAnalysis]);
 
   return (
     <div className="min-h-screen px-6 md:px-12 lg:px-20 pt-16 pb-24">
@@ -100,28 +134,60 @@ export default function HairstylePage() {
             )}
           </div>
 
-          {preview && !loading && !result && (
-            <button onClick={analyze}
+          {preview && step === "upload" && (
+            <button onClick={handleStart}
               className="w-full bg-white text-black rounded-full font-semibold py-3.5 hover:scale-[1.02] hover:opacity-90 transition-all shadow-[0_0_40px_rgba(255,255,255,0.15)] font-sans text-sm"
               style={{ letterSpacing: "0.1em" }}>
               Шинжлэх →
             </button>
           )}
 
-          {loading && (
+          {step === "payment" && invoice && (
+            <div className={`${CARD} p-6 text-center`}>
+              <p className={`${LABEL} mb-2`}>QPay төлбөр</p>
+              <p className="text-2xl font-kenoky text-white mb-1">{invoice.amount.toLocaleString()}₮</p>
+              <p className="text-xs text-white/30 font-sans mb-5">Үс засал & Грим шинжилгээ</p>
+              {invoice.qrImage && (
+                <div className="flex justify-center mb-5">
+                  <div className="bg-white p-3 rounded-2xl inline-block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`data:image/png;base64,${invoice.qrImage}`} alt="QPay QR" width={180} height={180} className="rounded-xl block" />
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-2 justify-center mb-4">
+                {[0,1,2].map((i) => <span key={i} className="w-1.5 h-1.5 rounded-full bg-gold animate-dot-blink inline-block" style={{ animationDelay: `${i * 0.2}s` }} />)}
+                <span className="text-xs text-white/35 font-sans">Хүлээж байна...</span>
+              </div>
+              {invoice.urls?.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  {invoice.urls.slice(0, 6).map((u: QPayUrl) => (
+                    <a key={u.name} href={u.link} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-2 p-2 rounded-[12px] bg-white/[0.04] border border-white/[0.07] hover:bg-white/[0.08] transition-all">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {u.logo && <img src={u.logo} alt={u.name} width={22} height={22} className="rounded-md shrink-0" />}
+                      <span className="text-xs text-white/50 truncate">{u.name}</span>
+                    </a>
+                  ))}
+                </div>
+              )}
+              <button onClick={() => { setStep("upload"); setInvoice(null); }} className="mt-4 w-full py-2.5 text-xs text-white/30 border border-white/[0.06] rounded-full hover:text-white/50 transition-all">← Буцах</button>
+            </div>
+          )}
+
+          {step === "analyzing" && (
             <div className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] p-10 text-center`}>
               <div className="flex gap-2.5 justify-center mb-5">
-                {[0,1,2].map((i) => (
-                  <span key={i} className="w-2 h-2 rounded-full inline-block bg-white animate-dot-blink"
-                    style={{ animationDelay: `${i * 0.18}s` }} />
-                ))}
+                {[0,1,2].map((i) => <span key={i} className="w-2 h-2 rounded-full inline-block bg-white animate-dot-blink" style={{ animationDelay: `${i * 0.18}s` }} />)}
               </div>
               <p className="text-base text-white/70 font-sans">Шинжилж байна...</p>
             </div>
           )}
 
-          {result && (
-            <button onClick={() => { setPreview(null); setResult(null); }}
+          {error && <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">{error}</p>}
+
+          {step === "result" && result && (
+            <button onClick={() => { setPreview(null); setDataUrl(null); setResult(null); setStep("upload"); }}
               className="w-full py-3.5 bg-white/[0.06] text-white/60 border border-white/[0.08] rounded-full hover:text-white hover:border-white/[0.18] transition-all font-sans text-sm"
               style={{ letterSpacing: "0.08em" }}>
               Дахин шинжлэх
@@ -130,7 +196,7 @@ export default function HairstylePage() {
         </div>
 
         {/* RIGHT — info or results */}
-        {!result && !loading && (
+        {step === "upload" && !result && (
           <div className="space-y-4 lg:pt-2">
             <p className={`${LABEL} mb-4`}>Юу авах вэ</p>
             {[
@@ -151,7 +217,7 @@ export default function HairstylePage() {
           </div>
         )}
 
-        {result && (
+        {step === "result" && result && (
           <div className="animate-fade-up lg:pt-2 space-y-4">
             {/* Face shape badge */}
             <div className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] flex items-center gap-4 p-5`}>
