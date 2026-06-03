@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import { generateOutfit, OutfitItem } from "@/apis/outfit";
+import { fileToDataUrl } from "@/apis/analyze";
 import { createInvoice, checkPayment, InvoiceResponse, QPayUrl } from "@/apis/payment";
 import { tokenStore } from "@/utils/request";
 
@@ -38,9 +40,17 @@ export default function OutfitPage() {
   const [selectedEvent, setSelectedEvent]   = useState<string | null>(null);
   const [selectedSeason, setSelectedSeason] = useState("Зун");
   const [selectedStyle, setSelectedStyle]   = useState("Minimal");
+  const [preview, setPreview]               = useState<string | null>(null);
+  const [dataUrl, setDataUrl]               = useState<string | null>(null);
   const [invoice, setInvoice]               = useState<InvoiceResponse | null>(null);
   const [result, setResult]                 = useState<OutfitItem[] | null>(null);
   const [error, setError]                   = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(file: File) {
+    setPreview(URL.createObjectURL(file));
+    setDataUrl(await fileToDataUrl(file));
+  }
 
   async function handleStart() {
     if (!selectedEvent) return;
@@ -60,14 +70,14 @@ export default function OutfitPage() {
     setStep("generating");
     setError(null);
     try {
-      const res = await generateOutfit(selectedEvent, selectedSeason, selectedStyle);
+      const res = await generateOutfit(selectedEvent, selectedSeason, selectedStyle, dataUrl ?? undefined);
       setResult(res.outfits);
       setStep("result");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Алдаа гарлаа");
       setStep("select");
     }
-  }, [selectedEvent, selectedSeason, selectedStyle]);
+  }, [selectedEvent, selectedSeason, selectedStyle, dataUrl]);
 
   useEffect(() => {
     if (step !== "payment" || !invoice) return;
@@ -85,7 +95,8 @@ export default function OutfitPage() {
   }, [step, invoice, runGenerate]);
 
   function reset() {
-    setStep("select"); setSelectedEvent(null); setInvoice(null); setResult(null); setError(null);
+    setStep("select"); setSelectedEvent(null); setInvoice(null); setResult(null);
+    setError(null); setPreview(null); setDataUrl(null);
   }
 
   return (
@@ -111,6 +122,51 @@ export default function OutfitPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-10 items-start">
         <div className="space-y-8">
+
+          <div>
+            <p className={`${LABEL} mb-3`}>Selfie upload (заавал биш — нэмэлт хувийн зөвлөмж авах)</p>
+            <div
+              className={`rounded-[20px] cursor-pointer transition-all overflow-hidden ${
+                preview
+                  ? "border border-white/[0.14] bg-white/[0.04]"
+                  : "border border-dashed border-white/[0.07] bg-white/[0.02] hover:border-white/[0.15] hover:bg-white/[0.04]"
+              }`}
+              style={{ minHeight: "9rem" }}
+              onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.type.startsWith("image/")) handleFile(f); }}
+              onDragOver={(e) => e.preventDefault()}
+              onClick={() => inputRef.current?.click()}
+            >
+              <input ref={inputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+
+              {preview ? (
+                <div className="flex items-center gap-4 p-4">
+                  <div className="relative shrink-0">
+                    <Image src={preview} alt="preview" width={80} height={80}
+                      className="object-cover rounded-xl border border-white/[0.12]" />
+                    <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-white flex items-center justify-center shadow">
+                      <span className="text-black text-[0.5rem] font-bold">✦</span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-white/70 font-sans">Selfie бэлэн</p>
+                    <p className="text-xs text-white/30 font-sans mt-1">AI таны биеийн онцлогт тохируулан зөвлөмж гаргана</p>
+                    <button onClick={(e) => { e.stopPropagation(); setPreview(null); setDataUrl(null); }}
+                      className="mt-2 text-xs text-white/25 hover:text-red-400 transition-colors">Устгах ×</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-3 p-6 text-center">
+                  <span className="text-white/20 text-2xl">✦</span>
+                  <div>
+                    <p className="text-sm text-white/40 font-sans">Selfie нэмэх (заавал биш)</p>
+                    <p className="text-xs text-white/20 font-sans mt-0.5">Нэмснээр илүү хувийн зөвлөмж авна</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div>
             <p className={`${LABEL} mb-4`}>Event сонгох</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

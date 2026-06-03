@@ -17,6 +17,7 @@ export interface OutfitResult {
 export const generateOutfit = (
   event: string,
   season: string,
-  style: string
+  style: string,
+  image?: string
 ): Promise<OutfitResult> =>
-  http.post("/", { event, season, style });
+  http.post("/", { event, season, style, ...(image ? { image } : {}) });
