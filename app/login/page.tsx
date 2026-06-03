@@ -1,19 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useSWR from "swr";
-import { useAuth } from "@/lib/AuthContext";
 import { otpStart, otpVerify } from "@/apis";
-import { ApiError } from "@/utils/request";
+import { ApiError, tokenStore } from "@/utils/request";
 import type { OtpStartResponse, AuthResponse } from "@/types/auth";
 
 export default function LoginPage() {
-  const { login } = useAuth();
-
-  const [step, setStep] = useState<"phone" | "otp">("phone");
-  const [phone, setPhone] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [step, setStep]       = useState<"phone" | "otp">("phone");
+  const [phone, setPhone]     = useState("");
+  const [error, setError]     = useState("");
+  const [busy, setBusy]       = useState(false);
   const [session, setSession] = useState<OtpStartResponse | null>(null);
 
   const { data: secondsLeft = 0 } = useSWR(
@@ -23,31 +20,55 @@ export default function LoginPage() {
     { refreshInterval: 1000, revalidateOnFocus: false }
   );
 
+  useEffect(() => {
+    if (step !== "otp" || !session) return;
 
-  useSWR(
-    step === "otp" && session ? ["otp-verify", session.sessionId] : null,
-    ([, sessionId]: [string, string]) => otpVerify(sessionId),
-    {
-      refreshInterval: (latest) => (!latest || !("token" in latest) ? 3_000 : 0),
-      revalidateOnFocus: false,
-      shouldRetryOnError: (err: unknown) =>
-        !(err instanceof ApiError && (err.status === 404 || err.status === 410)),
-      onSuccess: (data) => {
-        if (!("token" in data)) return;
-        const res = data as AuthResponse;
-        login(res.token, res.user);
-        window.location.href = "/";
-      },
-      onError: (err: unknown) => {
-        if (err instanceof ApiError && (err.status === 410 || err.status === 404)) {
+    const sessionId  = session.sessionId;
+    const expiresAt  = new Date(session.expiresAt).getTime();
+    let cancelled    = false;
+
+    async function check() {
+      if (cancelled) return;
+      try {
+        const data = await otpVerify(sessionId);
+
+        if (cancelled) return;
+
+        if ("token" in data) {
+          const res = data as AuthResponse;
+          tokenStore.set(res.token);
+          window.location.href = "/";
+          return;
+        }
+
+        if (Date.now() < expiresAt + 2_000) {
+          timer = setTimeout(check, 3_000);
+        } else {
           setError("OTP хугацаа дууссан. Дахин оролдоно уу.");
           setStep("phone");
           setSession(null);
         }
-      },
+      } catch (err) {
+        if (cancelled) return;
+        if (err instanceof ApiError && (err.status === 404 || err.status === 410)) {
+          setError("OTP хугацаа дууссан. Дахин оролдоно уу.");
+          setStep("phone");
+          setSession(null);
+          return;
+        }
+        if (Date.now() < expiresAt + 2_000) {
+          timer = setTimeout(check, 3_000);
+        }
+      }
     }
-  );
 
+    let timer: ReturnType<typeof setTimeout> = setTimeout(check, 3_000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [step, session]);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -74,9 +95,7 @@ export default function LoginPage() {
     setError("");
   }
 
-  function fmt(s: number) {
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-  }
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6">
@@ -127,10 +146,11 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={busy || !phone}
-                className={`w-full mt-1 py-3.5 rounded-full text-sm font-semibold font-sans transition-all ${busy || !phone
+                className={`w-full mt-1 py-3.5 rounded-full text-sm font-semibold font-sans transition-all ${
+                  busy || !phone
                     ? "bg-white/20 text-white/40 cursor-not-allowed"
                     : "bg-white text-black hover:scale-[1.02] hover:opacity-90 shadow-[0_0_40px_rgba(255,255,255,0.15)]"
-                  }`}
+                }`}
                 style={{ letterSpacing: "0.06em" }}>
                 {busy ? (
                   <span className="flex items-center justify-center gap-1.5">
@@ -160,14 +180,12 @@ export default function LoginPage() {
               <p className="text-sm text-white/70 font-sans mb-4" style={{ lineHeight: 1.7 }}>
                 {session.displayInstruction}
               </p>
-
               <a
                 href={session.smsUri}
                 className="inline-flex items-center gap-2 bg-white text-black text-sm font-semibold px-6 py-3 rounded-full hover:scale-[1.02] hover:opacity-90 transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] font-sans"
                 style={{ letterSpacing: "0.04em" }}>
                 <span>✉</span> SMS нээх
               </a>
-
               <p className="mt-3 text-[0.68rem] text-white/25 font-sans">
                 Гар утас дээр дарна уу
               </p>
