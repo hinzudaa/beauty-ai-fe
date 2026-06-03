@@ -6,6 +6,8 @@ import { useAuth } from "@/lib/AuthContext";
 import { getProfile, ProfileData } from "@/apis/profile";
 
 const FEATURE: Record<string, { label: string; icon: string; color: string }> = {
+  full:      { label: "Бүрэн шинжилгээ",   icon: "✦", color: "#9333ea" },
+  // legacy keys for historical payments/usage display
   analyze:   { label: "Нүүрний шинжилгээ", icon: "◈", color: "#9333ea" },
   outfit:    { label: "Хувцас генератор",  icon: "◉", color: "#7c3aed" },
   hairstyle: { label: "Үс засал & Грим",   icon: "✦", color: "#a855f7" },
@@ -152,7 +154,10 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="flex flex-col gap-4">
-                {Object.entries(data?.usage ?? {}).map(([feat, count]) => {
+                {Object.entries(data?.usage ?? {}).filter(([, count]) => count > 0).length === 0
+                  ? <p className="text-[0.82rem] text-[#aeaeb2]">Одоогоор хэрэглээ байхгүй байна</p>
+                  : null}
+                {Object.entries(data?.usage ?? {}).filter(([, count]) => count > 0).map(([feat, count]) => {
                   const meta = FEATURE[feat];
                   const pct  = totalUsage > 0 ? Math.round((count / totalUsage) * 100) : 0;
                   return (

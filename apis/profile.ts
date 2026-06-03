@@ -30,7 +30,7 @@ export interface ProfileData {
   };
   subscription: Subscription | null;
   payments:     ProfilePayment[];
-  usage:        { analyze: number; outfit: number; hairstyle: number };
+  usage:        Record<string, number>;
 }
 
 export const getProfile = (): Promise<ProfileData> => http.get("/");
