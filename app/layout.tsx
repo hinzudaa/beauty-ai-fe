@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="mn" className={montserrat.variable}>
-      <body className="min-h-screen" style={{ background: "#f2f2f7", color: "#1c1c1e" }}>
+      <body className="min-h-screen bg-[#f2f2f7] text-[#1c1c1e]">
         <AuthProvider>
           <Nav />
           <main>{children}</main>

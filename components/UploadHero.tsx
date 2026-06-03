@@ -6,8 +6,6 @@ import Image from "next/image";
 import { fileToDataUrl } from "@/apis/analyze";
 import { photoStore } from "@/utils/photoStore";
 
-const F = "var(--font-montserrat),'Helvetica Neue',Arial,sans-serif";
-
 const SERVICES = [
   { id: "analyze",   label: "Нүүрний шинжилгээ", sub: "Face shape · Skin tone · Style type", icon: "◈", color: "#9333ea", href: "/analyze"   },
   { id: "hairstyle", label: "Үс засал & Грим",    sub: "Hair styles · Makeup looks",          icon: "✦", color: "#a855f7", href: "/hairstyle" },
@@ -31,90 +29,92 @@ export default function UploadHero() {
     setLoading(false);
   }
 
-  function goTo(href: string) {
-    router.push(href);
-  }
-
   return (
-    <div style={{ width: "100%" }}>
+    <div className="w-full">
       {!preview ? (
         /* ── Upload zone ── */
         <div
           onClick={() => inputRef.current?.click()}
           onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
           onDragOver={(e) => e.preventDefault()}
-          style={{
-            borderRadius: 24, padding: "56px 24px", cursor: "pointer",
-            border: "2px dashed rgba(147,51,234,0.3)",
-            background: "rgba(147,51,234,0.03)",
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20,
-            transition: "all 0.2s",
-          }}
+          className="upload-zone rounded-[24px] py-14 px-6 cursor-pointer border-2 border-dashed border-[rgba(147,51,234,0.3)] bg-[rgba(147,51,234,0.03)] flex flex-col items-center justify-center gap-5 transition-all duration-200"
         >
-          <input ref={inputRef} type="file" accept="image/*" style={{ display: "none" }}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+          <input
+            ref={inputRef} type="file" accept="image/*" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+          />
 
-          <div style={{ width: 80, height: 80, borderRadius: "50%", background: "rgba(147,51,234,0.1)", border: "2px solid rgba(147,51,234,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2rem" }}>
+          <div className="w-20 h-20 rounded-full bg-[rgba(147,51,234,0.1)] border-2 border-[rgba(147,51,234,0.2)] flex items-center justify-center text-[2rem]">
             📸
           </div>
 
-          <div style={{ textAlign: "center" }}>
-            <p style={{ fontFamily: F, fontSize: "1.15rem", fontWeight: 700, color: "#1c1c1e", margin: "0 0 8px" }}>
+          <div className="text-center">
+            <p className="text-[1.15rem] font-bold text-[#1c1c1e] mb-2">
               Зургаа оруулна уу
             </p>
-            <p style={{ fontFamily: F, fontSize: "0.88rem", color: "#8e8e93", margin: "0 0 12px" }}>
+            <p className="text-[0.88rem] text-[#8e8e93] mb-3">
               JPG · PNG · WEBP · Selfie хамгийн сайн
             </p>
-            <span style={{ fontFamily: F, fontSize: "0.78rem", fontWeight: 700, color: "#9333ea", background: "rgba(147,51,234,0.08)", border: "1px solid rgba(147,51,234,0.2)", borderRadius: 999, padding: "4px 14px" }}>
+            <span className="text-[0.78rem] font-bold text-[#9333ea] bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] rounded-full px-[14px] py-1">
               Эхний удаа үнэгүй ✦
             </span>
           </div>
 
           {loading && (
-            <div style={{ display: "flex", gap: 8 }}>
-              {[0,1,2].map(i => <span key={i} className="animate-dot-blink" style={{ width: 8, height: 8, borderRadius: "50%", background: "#9333ea", display: "inline-block", animationDelay: `${i*0.18}s` }} />)}
+            <div className="flex gap-2">
+              {[0,1,2].map(i => (
+                <span key={i} className="animate-dot-blink w-2 h-2 rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.18}s` }} />
+              ))}
             </div>
           )}
         </div>
       ) : (
         /* ── Service selection ── */
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div className="flex flex-col gap-5">
           {/* Photo preview */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16, background: "#fff", borderRadius: 18, border: "1px solid rgba(0,0,0,0.07)", padding: "14px 18px", boxShadow: "0 2px 12px rgba(0,0,0,0.05)" }}>
-            <div style={{ position: "relative", flexShrink: 0 }}>
-              <Image src={preview} alt="Таны зураг" width={60} height={60} style={{ objectFit: "cover", borderRadius: 12, border: "1px solid rgba(0,0,0,0.08)" }} />
-              <div style={{ position: "absolute", bottom: -4, right: -4, width: 20, height: 20, borderRadius: "50%", background: "#9333ea", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#fff", fontSize: "0.55rem" }}>✦</span>
+          <div className="flex items-center gap-4 bg-white rounded-[18px] border border-[rgba(0,0,0,0.07)] px-[18px] py-[14px] shadow-[0_2px_12px_rgba(0,0,0,0.05)]">
+            <div className="relative shrink-0">
+              <Image
+                src={preview} alt="Таны зураг" width={60} height={60}
+                className="object-cover rounded-xl border border-[rgba(0,0,0,0.08)]"
+              />
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#9333ea] flex items-center justify-center">
+                <span className="text-white text-[0.55rem]">✦</span>
               </div>
             </div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontFamily: F, fontSize: "0.92rem", fontWeight: 700, color: "#1c1c1e", margin: "0 0 3px" }}>Зураг бэлэн боллоо</p>
-              <p style={{ fontFamily: F, fontSize: "0.78rem", color: "#8e8e93", margin: 0 }}>Доорх үйлчилгээнүүдээс сонгоно уу</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-[0.92rem] font-bold text-[#1c1c1e] mb-[3px]">Зураг бэлэн боллоо</p>
+              <p className="text-[0.78rem] text-[#8e8e93]">Доорх үйлчилгээнүүдээс сонгоно уу</p>
             </div>
-            <button onClick={() => { setPreview(null); photoStore.clear(); }}
-              style={{ fontFamily: F, fontSize: "0.75rem", color: "#aeaeb2", background: "none", border: "none", cursor: "pointer", flexShrink: 0 }}>
+            <button
+              onClick={() => { setPreview(null); photoStore.clear(); }}
+              className="text-[0.75rem] text-[#aeaeb2] bg-transparent border-none cursor-pointer shrink-0"
+            >
               Солих
             </button>
           </div>
 
           {/* Service cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="grid grid-cols-2 gap-3">
             {SERVICES.map((s) => (
-              <button key={s.id} onClick={() => goTo(s.href)}
+              <button
+                key={s.id}
+                onClick={() => router.push(s.href)}
+                className="p-[20px_18px] rounded-[18px] text-left cursor-pointer flex flex-col gap-[10px] transition-all duration-[180ms]"
                 style={{
-                  padding: "20px 18px", borderRadius: 18, textAlign: "left", cursor: "pointer",
                   border: `1.5px solid ${s.color}25`,
                   background: `${s.color}06`,
                   boxShadow: `0 2px 12px ${s.color}0f`,
-                  transition: "all 0.18s",
-                  display: "flex", flexDirection: "column", gap: 10,
-                }}>
-                <span style={{ fontSize: "1.4rem", color: s.color }}>{s.icon}</span>
+                }}
+              >
+                <span className="text-[1.4rem]" style={{ color: s.color }}>{s.icon}</span>
                 <div>
-                  <p style={{ fontFamily: F, fontSize: "0.92rem", fontWeight: 800, color: "#1c1c1e", margin: "0 0 4px" }}>{s.label}</p>
-                  <p style={{ fontFamily: F, fontSize: "0.73rem", color: "#8e8e93", margin: 0, lineHeight: 1.4 }}>{s.sub}</p>
+                  <p className="text-[0.92rem] font-extrabold text-[#1c1c1e] mb-1">{s.label}</p>
+                  <p className="text-[0.73rem] text-[#8e8e93] leading-[1.4]">{s.sub}</p>
                 </div>
-                <span style={{ fontFamily: F, fontSize: "0.72rem", fontWeight: 700, color: s.color, alignSelf: "flex-start" }}>Үргэлжлүүлэх →</span>
+                <span className="text-[0.72rem] font-bold self-start" style={{ color: s.color }}>
+                  Үргэлжлүүлэх →
+                </span>
               </button>
             ))}
           </div>

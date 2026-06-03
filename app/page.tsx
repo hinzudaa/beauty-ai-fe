@@ -1,31 +1,43 @@
 import Link from "next/link";
 import UploadHero from "@/components/UploadHero";
 
-const F = "var(--font-montserrat),'Helvetica Neue',Arial,sans-serif";
-
 function ScanDot({ x, y, delay = "0s" }: { x: string; y: string; delay?: string }) {
   return (
-    <div style={{ position: "absolute", left: x, top: y, transform: "translate(-50%,-50%)" }}>
-      <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#64dcff", boxShadow: "0 0 8px #64dcff", position: "relative" }}>
-        <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "rgba(100,220,255,0.4)", animation: `dot-ping 1.6s ease-out ${delay} infinite` }} />
+    <div className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: x, top: y }}>
+      <div className="w-[7px] h-[7px] rounded-full bg-[#64dcff] shadow-[0_0_8px_#64dcff] relative">
+        <div
+          className="absolute inset-0 rounded-full bg-[rgba(100,220,255,0.4)]"
+          style={{ animation: `dot-ping 1.6s ease-out ${delay} infinite` }}
+        />
       </div>
     </div>
   );
 }
 
-function HairCard({ label, isFirst, videoSrc, delay = "0ms" }: { label: string; isFirst?: boolean; videoSrc: string; delay?: string }) {
+function HairCard({ label, isFirst, videoSrc, delay = "0ms" }: {
+  label: string; isFirst?: boolean; videoSrc: string; delay?: string;
+}) {
   return (
-    <div className="anim-scale-in" style={{ animationDelay: delay, position: "relative", borderRadius: 14, overflow: "hidden", background: "#1a1a2e", flex: "1 1 0", minWidth: 0 }}>
-      <div style={{ aspectRatio: "3/4" }}>
-        <video src={videoSrc} autoPlay muted loop playsInline style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+    <div
+      className="anim-scale-in relative rounded-[14px] overflow-hidden bg-[#1a1a2e] flex-1 min-w-0"
+      style={{ animationDelay: delay }}
+    >
+      <div className="aspect-[3/4]">
+        <video src={videoSrc} autoPlay muted loop playsInline className="w-full h-full object-cover block" />
       </div>
       {isFirst && (
-        <div style={{ position: "absolute", top: 7, right: 7, background: "linear-gradient(135deg,#9333ea,#7c3aed)", borderRadius: 999, padding: "3px 9px" }}>
-          <span style={{ fontFamily: F, fontSize: "0.58rem", fontWeight: 700, color: "#fff" }}>Best ✦</span>
+        <div
+          className="absolute top-[7px] right-[7px] rounded-full px-[9px] py-[3px]"
+          style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)" }}
+        >
+          <span className="text-[0.58rem] font-bold text-white">Best ✦</span>
         </div>
       )}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top,rgba(0,0,0,0.8),transparent)", padding: "18px 8px 9px" }}>
-        <p style={{ fontFamily: F, fontSize: "0.6rem", fontWeight: 700, color: "#fff", margin: 0, textAlign: "center" }}>{label}</p>
+      <div
+        className="absolute bottom-0 left-0 right-0 px-2 pb-[9px] pt-[18px]"
+        style={{ background: "linear-gradient(to top,rgba(0,0,0,0.8),transparent)" }}
+      >
+        <p className="text-[0.6rem] font-bold text-white text-center">{label}</p>
       </div>
     </div>
   );
@@ -36,63 +48,66 @@ function PricingCard({ name, price, tag, features, cta, href, highlight = false,
   cta: string; href: string; highlight?: boolean; animDelay?: string;
 }) {
   return (
-    <div className={`anim-fade-up ${highlight ? "pricing-card-pro" : "pricing-card-basic"}`}
+    <div
+      className={`anim-fade-up ${highlight ? "pricing-card-pro" : "pricing-card-basic"} rounded-[24px] flex flex-col gap-[22px] relative overflow-hidden`}
       style={{
         animationDelay: animDelay,
         background: highlight ? "#1c1c1e" : "#fff",
-        borderRadius: 24,
         border: highlight ? "none" : "1px solid rgba(0,0,0,0.08)",
         boxShadow: highlight ? "0 20px 60px rgba(28,28,30,0.22)" : "0 2px 16px rgba(0,0,0,0.05)",
         padding: "32px 28px",
-        display: "flex", flexDirection: "column", gap: 22,
-        position: "relative", overflow: "hidden",
-        transition: "all 0.3s ease",
-      }}>
+      }}
+    >
       {highlight && (
         <>
-          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "linear-gradient(90deg,#9333ea,#c084fc,#7c3aed)", backgroundSize: "200%", animation: "gradient-x 3s ease infinite" }} />
-          {/* subtle glow orb */}
-          <div style={{ position: "absolute", top: -60, right: -60, width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle,rgba(147,51,234,0.15),transparent 70%)", pointerEvents: "none" }} />
+          <div
+            className="absolute top-0 left-0 right-0 h-[3px]"
+            style={{ background: "linear-gradient(90deg,#9333ea,#c084fc,#7c3aed)", backgroundSize: "200%", animation: "gradient-x 3s ease infinite" }}
+          />
+          <div
+            className="absolute -top-[60px] -right-[60px] w-[200px] h-[200px] rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(circle,rgba(147,51,234,0.15),transparent 70%)" }}
+          />
         </>
       )}
 
       <div>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18, gap: 8 }}>
-          <span style={{ fontFamily: F, fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: highlight ? "rgba(255,255,255,0.45)" : "#8e8e93" }}>
+        <div className="flex items-start justify-between mb-[18px] gap-2">
+          <span className={`text-[0.72rem] font-bold tracking-[0.1em] uppercase ${highlight ? "text-[rgba(255,255,255,0.45)]" : "text-[#8e8e93]"}`}>
             {name}
           </span>
           {highlight && (
-            <span style={{ fontFamily: F, fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#c084fc", background: "rgba(192,132,252,0.12)", border: "1px solid rgba(192,132,252,0.28)", borderRadius: 999, padding: "3px 10px", whiteSpace: "nowrap", flexShrink: 0 }}>
+            <span className="text-[0.6rem] font-bold tracking-[0.06em] uppercase text-[#c084fc] bg-[rgba(192,132,252,0.12)] border border-[rgba(192,132,252,0.28)] rounded-full px-[10px] py-[3px] whitespace-nowrap shrink-0">
               Хамгийн алдартай
             </span>
           )}
         </div>
-        <p style={{ fontFamily: F, fontSize: "2.8rem", fontWeight: 800, letterSpacing: "-0.04em", color: highlight ? "#fff" : "#1c1c1e", margin: "0 0 4px", lineHeight: 1 }}>
+        <p className={`text-[2.8rem] font-extrabold tracking-[-0.04em] leading-none mb-1 ${highlight ? "text-white" : "text-[#1c1c1e]"}`}>
           ₮{price}
         </p>
-        <p style={{ fontFamily: F, fontSize: "0.84rem", color: highlight ? "rgba(255,255,255,0.38)" : "#8e8e93", margin: 0 }}>{tag}</p>
+        <p className={`text-[0.84rem] ${highlight ? "text-[rgba(255,255,255,0.38)]" : "text-[#8e8e93]"}`}>{tag}</p>
       </div>
 
-      <div style={{ height: 1, background: highlight ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }} />
+      <div className={`h-px ${highlight ? "bg-[rgba(255,255,255,0.08)]" : "bg-[rgba(0,0,0,0.06)]"}`} />
 
-      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 11 }}>
+      <ul className="list-none p-0 flex flex-col gap-[11px]">
         {features.map((f, i) => (
-          <li key={i} style={{ display: "flex", gap: 10, fontFamily: F, fontSize: "0.86rem", color: highlight ? "rgba(255,255,255,0.78)" : "#3a3a3c", lineHeight: 1.45 }}>
-            <span style={{ color: highlight ? "#c084fc" : "#9333ea", flexShrink: 0, fontWeight: 700 }}>✓</span>{f}
+          <li key={i} className={`flex gap-[10px] text-[0.86rem] leading-[1.45] ${highlight ? "text-[rgba(255,255,255,0.78)]" : "text-[#3a3a3c]"}`}>
+            <span className={`shrink-0 font-bold ${highlight ? "text-[#c084fc]" : "text-[#9333ea]"}`}>✓</span>{f}
           </li>
         ))}
       </ul>
 
-      <Link href={href} style={{
-        display: "block", textAlign: "center", borderRadius: 999,
-        padding: "14px 0", fontFamily: F, fontWeight: 700, fontSize: "0.9rem",
-        textDecoration: "none",
-        background: highlight ? "linear-gradient(135deg,#9333ea,#7c3aed)" : "transparent",
-        color: highlight ? "#fff" : "#1c1c1e",
-        border: highlight ? "none" : "1.5px solid rgba(0,0,0,0.14)",
-        boxShadow: highlight ? "0 4px 20px rgba(147,51,234,0.4)" : "none",
-        transition: "all 0.2s",
-      }}>
+      <Link
+        href={href}
+        className="block text-center rounded-full py-[14px] font-bold text-[0.9rem] transition-all duration-200"
+        style={{
+          background: highlight ? "linear-gradient(135deg,#9333ea,#7c3aed)" : "transparent",
+          color: highlight ? "#fff" : "#1c1c1e",
+          border: highlight ? "none" : "1.5px solid rgba(0,0,0,0.14)",
+          boxShadow: highlight ? "0 4px 20px rgba(147,51,234,0.4)" : "none",
+        }}
+      >
         {cta}
       </Link>
     </div>
@@ -101,71 +116,61 @@ function PricingCard({ name, price, tag, features, cta, href, highlight = false,
 
 export default function Home() {
   return (
-    <div style={{ background: "#f2f2f7", minHeight: "100vh" }}>
+    <div className="bg-[#f2f2f7] min-h-screen">
 
       {/* Ambient blobs */}
-      <div aria-hidden style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", overflow: "hidden" }}>
-        <div className="anim-fade-in delay-0" style={{ position: "absolute", top: "-25%", left: "-15%", width: "60vw", height: "60vw", borderRadius: "50%", background: "radial-gradient(circle,rgba(167,139,250,0.14),transparent 68%)", filter: "blur(56px)" }} />
-        <div className="anim-fade-in delay-300" style={{ position: "absolute", top: "30%", right: "-12%", width: "45vw", height: "45vw", borderRadius: "50%", background: "radial-gradient(circle,rgba(192,132,252,0.1),transparent 68%)", filter: "blur(56px)" }} />
-        <div className="anim-fade-in delay-600" style={{ position: "absolute", bottom: "-5%", left: "25%", width: "50vw", height: "35vw", borderRadius: "50%", background: "radial-gradient(circle,rgba(139,92,246,0.09),transparent 68%)", filter: "blur(64px)" }} />
+      <div aria-hidden className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="anim-fade-in delay-0 absolute -top-[25%] -left-[15%] w-[60vw] h-[60vw] rounded-full"
+          style={{ background: "radial-gradient(circle,rgba(167,139,250,0.14),transparent 68%)", filter: "blur(56px)" }} />
+        <div className="anim-fade-in delay-300 absolute top-[30%] -right-[12%] w-[45vw] h-[45vw] rounded-full"
+          style={{ background: "radial-gradient(circle,rgba(192,132,252,0.1),transparent 68%)", filter: "blur(56px)" }} />
+        <div className="anim-fade-in delay-600 absolute -bottom-[5%] left-[25%] w-[50vw] h-[35vw] rounded-full"
+          style={{ background: "radial-gradient(circle,rgba(139,92,246,0.09),transparent 68%)", filter: "blur(64px)" }} />
       </div>
 
-      <div style={{ position: "relative", zIndex: 1 }}>
+      <div className="relative z-[1]">
 
         {/* ══ HERO ══════════════════════════════════════════ */}
-        <section style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 20px 64px" }} className="md:px-12 lg:px-20">
-          <div style={{ display: "grid", gap: 52, alignItems: "start" }} className="grid-cols-1 md:grid-cols-2">
+        <section className="max-w-[1200px] mx-auto px-5 md:px-12 lg:px-20 pt-[60px] pb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-[52px] items-start">
 
             {/* Left */}
             <div>
-              <div className="anim-fade-up delay-0" style={{ marginBottom: 24 }}>
-                <span style={{ fontFamily: F, fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9333ea", display: "inline-flex", alignItems: "center", gap: 7, padding: "6px 14px", borderRadius: 999, background: "rgba(147,51,234,0.08)", border: "1px solid rgba(147,51,234,0.2)" }}>
-                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#9333ea" }} className="animate-dot-blink" />
+              <div className="anim-fade-up delay-0 mb-6">
+                <span className="text-[0.68rem] font-bold tracking-[0.1em] uppercase text-[#9333ea] inline-flex items-center gap-[7px] px-[14px] py-[6px] rounded-full bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)]">
+                  <div className="animate-dot-blink w-[5px] h-[5px] rounded-full bg-[#9333ea]" />
                   Монголд анхных · 2026
                 </span>
               </div>
 
-              {/* Brand name */}
-              <div className="anim-fade-up delay-100" style={{ marginBottom: 12 }}>
-                <span style={{
-                  fontFamily: F, fontSize: "clamp(3.6rem,7vw,5.8rem)", fontWeight: 800,
-                  letterSpacing: "-0.055em", lineHeight: 0.95,
-                  background: "linear-gradient(135deg,#1c1c1e 0%,#3a3a3c 50%,#1c1c1e 100%)",
-                  WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-                  display: "inline-block",
-                }}>
-                
-                </span>
-              </div>
-
-              {/* Tagline */}
-              <h1 className="anim-fade-up delay-150" style={{
-                fontFamily: F, fontSize: "clamp(1.5rem,3.2vw,2.5rem)",
-                fontWeight: 700, lineHeight: 1.22, letterSpacing: "-0.025em",
-                color: "#3a3a3c", margin: "0 0 28px",
-              }}>
+              <h1 className="anim-fade-up delay-150 text-[clamp(1.5rem,3.2vw,2.5rem)] font-bold leading-[1.22] tracking-[-0.025em] text-[#3a3a3c] mb-7">
                 Looka -Таны өдөр тутмын
                 <br />
-                <span className="animated-gradient-text" style={{ fontWeight: 800 }}>хувийн стилист </span>
+                <span className="animated-gradient-text font-extrabold">хувийн стилист </span>
               </h1>
 
-              {/* Long subtitle */}
-              <div className="anim-fade-up delay-200" style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 32 }}>
-                <p style={{ fontFamily: F, fontSize: "0.95rem", fontWeight: 500, lineHeight: 1.8, color: "#3a3a3c" }}>
+              <div className="anim-fade-up delay-200 flex flex-col gap-4 mb-8">
+                <p className="text-[0.95rem] font-medium leading-[1.8] text-[#3a3a3c]">
                   Монгол хүний нүүр, биеийн онцлог, физиологид тохируулан таны нүүрний хэлбэр болон гоо зүйн ерөнхий анализийг хийж, хувийн стильд тохирсон үр дүнг гаргана.
                 </p>
-                <p style={{ fontFamily: F, fontSize: "0.9rem", fontWeight: 400, lineHeight: 1.8, color: "#6e6e73" }}>
+                <p className="text-[0.9rem] leading-[1.8] text-[#6e6e73]">
                   Дэвшилтэт хиймэл оюун ухаанд суурилсан энэхүү технологи нь таны нүүр болон бие дээр үс засалт, нүүр будалт, хувцаслалтын өөр өөр хувилбаруудыг AI-generated зураг хэлбэрээр харуулж, танд хамгийн тохирох look-ийг санал болгоно.
                 </p>
-                <p style={{ fontFamily: F, fontSize: "0.9rem", fontWeight: 400, lineHeight: 1.8, color: "#6e6e73" }}>
+                <p className="text-[0.9rem] leading-[1.8] text-[#6e6e73]">
                   Мөн сонгосон стиль бүр дээр тохирох бүтээгдэхүүн, худалдан авах боломжтой линкүүд болон зөвлөмжүүдийг нэг дороос авах боломжтой.
                 </p>
               </div>
 
               {/* Feature pills */}
-              <div className="anim-fade-up delay-300" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <div className="anim-fade-up delay-300 flex flex-wrap gap-2">
                 {["Нүүрний шинжилгээ", "Үс засал", "Нүүр будалт", "Хувцаслалт", "Бүтээгдэхүүн зөвлөмж"].map((l, i) => (
-                  <span key={l} className="anim-scale-in" style={{ animationDelay: `${300 + i * 60}ms`, fontFamily: F, fontSize: "0.78rem", fontWeight: 600, color: "#6e6e73", background: "#fff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 999, padding: "6px 14px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>{l}</span>
+                  <span
+                    key={l}
+                    className="anim-scale-in text-[0.78rem] font-semibold text-[#6e6e73] bg-white border border-[rgba(0,0,0,0.08)] rounded-full px-[14px] py-[6px] shadow-[0_1px_4px_rgba(0,0,0,0.04)]"
+                    style={{ animationDelay: `${300 + i * 60}ms` }}
+                  >
+                    {l}
+                  </span>
                 ))}
               </div>
             </div>
@@ -178,48 +183,52 @@ export default function Home() {
         </section>
 
         {/* ══ AI SHOWCASE BANNER ════════════════════════════ */}
-        <section style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px 72px" }} className="anim-fade-up delay-400 md:px-12 lg:px-20">
-          <div style={{ borderRadius: 28, overflow: "hidden", background: "#0d0d18", boxShadow: "0 8px 56px rgba(0,0,0,0.22)", position: "relative" }}>
-
+        <section className="anim-fade-up delay-400 max-w-[1200px] mx-auto px-5 md:px-12 lg:px-20 pb-[72px]">
+          <div
+            className="rounded-[28px] overflow-hidden bg-[#0d0d18] relative"
+            style={{ boxShadow: "0 8px 56px rgba(0,0,0,0.22)" }}
+          >
             {/* top gradient bar */}
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,transparent,#9333ea,#c084fc,#7c3aed,transparent)", animation: "gradient-x 3s ease infinite", backgroundSize: "200%" }} />
+            <div
+              className="absolute top-0 left-0 right-0 h-[2px]"
+              style={{ background: "linear-gradient(90deg,transparent,#9333ea,#c084fc,#7c3aed,transparent)", animation: "gradient-x 3s ease infinite", backgroundSize: "200%" }}
+            />
 
             {/* Banner header */}
-            <div style={{ padding: "22px 28px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#64dcff", boxShadow: "0 0 8px #64dcff", position: "relative" }}>
-                  <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "rgba(100,220,255,0.4)", animation: "dot-ping 1.6s ease-out infinite" }} />
+            <div className="px-7 py-[22px] border-b border-[rgba(255,255,255,0.06)] flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-[10px]">
+                <div className="w-[7px] h-[7px] rounded-full bg-[#64dcff] shadow-[0_0_8px_#64dcff] relative">
+                  <div className="absolute inset-0 rounded-full bg-[rgba(100,220,255,0.4)]"
+                    style={{ animation: "dot-ping 1.6s ease-out infinite" }} />
                 </div>
-                <span style={{ fontFamily: F, fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.5)" }}>AI Vision · Live Analysis</span>
+                <span className="text-[0.7rem] font-bold tracking-[0.12em] uppercase text-[rgba(255,255,255,0.5)]">AI Vision · Live Analysis</span>
               </div>
-              <span style={{ fontFamily: F, fontSize: "0.7rem", fontWeight: 600, color: "rgba(255,255,255,0.25)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Demo preview</span>
+              <span className="text-[0.7rem] font-semibold text-[rgba(255,255,255,0.25)] tracking-[0.08em] uppercase">Demo preview</span>
             </div>
 
             {/* Showcase content */}
-            <div style={{ padding: "24px 28px 28px", display: "flex", gap: 20, alignItems: "stretch", flexWrap: "wrap" }}>
+            <div className="p-[24px_28px_28px] flex gap-5 items-stretch flex-wrap">
 
               {/* Left — face scan */}
-              <div className="anim-scale-in delay-500" style={{ position: "relative", borderRadius: 18, overflow: "hidden", background: "#111122", flexShrink: 0, width: "min(220px, 100%)" }}>
-                <video src="https://pub-b4ea1073afd44537a913d4d4b2a8fbae.r2.dev/assets/asset-016.mp4"
+              <div className="anim-scale-in delay-500 relative rounded-[18px] overflow-hidden bg-[#111122] shrink-0 w-[min(220px,100%)]">
+                <video
+                  src="https://pub-b4ea1073afd44537a913d4d4b2a8fbae.r2.dev/assets/asset-016.mp4"
                   autoPlay muted loop playsInline
-                  style={{ width: "100%", aspectRatio: "3/4", objectFit: "cover", display: "block", opacity: 0.85 }} />
+                  className="w-full object-cover block opacity-85"
+                  style={{ aspectRatio: "3/4" }}
+                />
 
                 {/* Scan overlay */}
-                <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-                  {/* Animated scan line */}
+                <div className="absolute inset-0 pointer-events-none">
                   <div className="scan-line" />
-                  {/* Horizontal guide */}
-                  <div style={{ position: "absolute", top: "43%", left: "8%", right: "8%", height: 1, background: "rgba(100,220,255,0.35)" }} />
-                  {/* Vertical guide */}
-                  <div style={{ position: "absolute", left: "50%", top: "12%", bottom: "12%", width: 1, background: "rgba(100,220,255,0.35)", transform: "translateX(-50%)" }} />
-                  {/* Corner brackets */}
+                  <div className="absolute top-[43%] left-[8%] right-[8%] h-px bg-[rgba(100,220,255,0.35)]" />
+                  <div className="absolute left-1/2 top-[12%] bottom-[12%] w-px bg-[rgba(100,220,255,0.35)] -translate-x-1/2" />
                   {[["9%","11%"],["81%","11%"],["9%","81%"],["81%","81%"]].map(([l,t],i) => (
-                    <div key={i} style={{ position: "absolute", left: l, top: t }}>
-                      <div style={{ position: "absolute", top: 0, left: 0, width: 11, height: 2, background: "#64dcff" }} />
-                      <div style={{ position: "absolute", top: 0, left: 0, width: 2, height: 11, background: "#64dcff" }} />
+                    <div key={i} className="absolute" style={{ left: l, top: t }}>
+                      <div className="absolute top-0 left-0 w-[11px] h-[2px] bg-[#64dcff]" />
+                      <div className="absolute top-0 left-0 w-[2px] h-[11px] bg-[#64dcff]" />
                     </div>
                   ))}
-                  {/* Tracking dots */}
                   <ScanDot x="50%" y="28%" delay="0s" />
                   <ScanDot x="33%" y="40%" delay="0.2s" />
                   <ScanDot x="67%" y="40%" delay="0.4s" />
@@ -230,28 +239,27 @@ export default function Home() {
                   <ScanDot x="65%" y="70%" delay="0.7s" />
                 </div>
 
-                {/* Badges */}
-                <div style={{ position: "absolute", bottom: 12, left: 12, background: "rgba(0,0,0,0.72)", backdropFilter: "blur(8px)", borderRadius: 9, padding: "5px 11px", display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#64dcff" }} className="animate-dot-blink" />
-                  <span style={{ fontFamily: F, fontSize: "0.62rem", fontWeight: 700, color: "#fff", letterSpacing: "0.08em" }}>SCANNING</span>
+                <div className="absolute bottom-3 left-3 bg-[rgba(0,0,0,0.72)] backdrop-blur-[8px] rounded-[9px] px-[11px] py-[5px] flex items-center gap-[6px]">
+                  <div className="animate-dot-blink w-[5px] h-[5px] rounded-full bg-[#64dcff]" />
+                  <span className="text-[0.62rem] font-bold text-white tracking-[0.08em]">SCANNING</span>
                 </div>
-                <div style={{ position: "absolute", top: 10, right: 10, background: "rgba(100,220,255,0.12)", border: "1px solid rgba(100,220,255,0.35)", borderRadius: 7, padding: "3px 9px" }}>
-                  <span style={{ fontFamily: F, fontSize: "0.58rem", fontWeight: 700, color: "#64dcff", letterSpacing: "0.06em" }}>BEFORE</span>
+                <div className="absolute top-[10px] right-[10px] bg-[rgba(100,220,255,0.12)] border border-[rgba(100,220,255,0.35)] rounded-[7px] px-[9px] py-[3px]">
+                  <span className="text-[0.58rem] font-bold text-[#64dcff] tracking-[0.06em]">BEFORE</span>
                 </div>
               </div>
 
               {/* Right — 5 hair results */}
-              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 14 }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                  <p style={{ fontFamily: F, fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.38)", margin: 0 }}>
+              <div className="flex-1 min-w-0 flex flex-col gap-[14px]">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[0.7rem] font-bold tracking-[0.1em] uppercase text-[rgba(255,255,255,0.38)]">
                     AI санал болгосон look-ууд
                   </p>
-                  <span style={{ fontFamily: F, fontSize: "0.66rem", fontWeight: 600, color: "#9333ea", background: "rgba(147,51,234,0.15)", border: "1px solid rgba(147,51,234,0.28)", borderRadius: 999, padding: "3px 10px", flexShrink: 0 }}>
+                  <span className="text-[0.66rem] font-semibold text-[#9333ea] bg-[rgba(147,51,234,0.15)] border border-[rgba(147,51,234,0.28)] rounded-full px-[10px] py-[3px] shrink-0">
                     5 хувилбар
                   </span>
                 </div>
 
-                <div style={{ display: "flex", gap: 9, overflow: "hidden" }}>
+                <div className="flex gap-[9px] overflow-hidden">
                   <HairCard label="Short bob" isFirst delay="500ms" videoSrc="https://pub-b4ea1073afd44537a913d4d4b2a8fbae.r2.dev/assets/asset-016.mp4" />
                   <HairCard label="Wavy lob"  delay="580ms" videoSrc="https://pub-b4ea1073afd44537a913d4d4b2a8fbae.r2.dev/assets/asset-017.mp4" />
                   <HairCard label="Updo"      delay="660ms" videoSrc="https://pub-b4ea1073afd44537a913d4d4b2a8fbae.r2.dev/assets/asset-018.mp4" />
@@ -259,24 +267,31 @@ export default function Home() {
                   <HairCard label="Braided"   delay="820ms" videoSrc="https://pub-b4ea1073afd44537a913d4d4b2a8fbae.r2.dev/assets/asset-016.mp4" />
                 </div>
 
-                <div className="anim-fade-in delay-700" style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                <div className="anim-fade-in delay-700 flex flex-wrap gap-[7px]">
                   {[
                     { label: "Oval нүүр",      color: "#9333ea" },
                     { label: "Warm undertone", color: "#d97706" },
                     { label: "Classic style",  color: "#059669" },
                     { label: "Medium depth",   color: "#2563eb" },
                   ].map((c) => (
-                    <span key={c.label} style={{ fontFamily: F, fontSize: "0.71rem", fontWeight: 600, color: c.color, background: `${c.color}18`, border: `1px solid ${c.color}30`, borderRadius: 999, padding: "4px 12px" }}>
+                    <span
+                      key={c.label}
+                      className="text-[0.71rem] font-semibold rounded-full px-3 py-1"
+                      style={{ color: c.color, background: `${c.color}18`, border: `1px solid ${c.color}30` }}
+                    >
                       {c.label}
                     </span>
                   ))}
                 </div>
 
-                <div className="anim-fade-in delay-800" style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 4, flexWrap: "wrap" }}>
-                  <Link href="/analyze" style={{ fontFamily: F, fontWeight: 700, fontSize: "0.86rem", color: "#9333ea", background: "rgba(147,51,234,0.12)", border: "1px solid rgba(147,51,234,0.22)", borderRadius: 999, padding: "10px 22px", textDecoration: "none" }}>
+                <div className="anim-fade-in delay-800 flex items-center gap-[14px] mt-1 flex-wrap">
+                  <Link
+                    href="/analyze"
+                    className="text-[0.86rem] font-bold text-[#9333ea] bg-[rgba(147,51,234,0.12)] border border-[rgba(147,51,234,0.22)] rounded-full px-[22px] py-[10px]"
+                  >
                     Өөрийн look авах →
                   </Link>
-                  <p style={{ fontFamily: F, fontSize: "0.76rem", color: "rgba(255,255,255,0.28)", margin: 0 }}>
+                  <p className="text-[0.76rem] text-[rgba(255,255,255,0.28)]">
                     Зургаа оруулаад 30 сек-д үр дүн авна
                   </p>
                 </div>
@@ -286,23 +301,19 @@ export default function Home() {
         </section>
 
         {/* ══ PRICING ══════════════════════════════════════ */}
-        <section style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px 80px" }} className="md:px-12 lg:px-20">
+        <section className="max-w-[1200px] mx-auto px-5 md:px-12 lg:px-20 pb-20">
 
-          {/* Header */}
-          <div className="anim-fade-up delay-0" style={{ textAlign: "center", marginBottom: 48 }}>
-            <p style={{ fontFamily: F, fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8e8e93", marginBottom: 14 }}>
-              Үнийн санал
-            </p>
-            <h2 style={{ fontFamily: F, fontSize: "clamp(1.9rem,4vw,2.8rem)", fontWeight: 800, letterSpacing: "-0.03em", color: "#1c1c1e", lineHeight: 1.1, marginBottom: 16 }}>
+          <div className="anim-fade-up delay-0 text-center mb-12">
+            <p className="label-style mb-[14px]">Үнийн санал</p>
+            <h2 className="text-[clamp(1.9rem,4vw,2.8rem)] tracking-[-0.03em] leading-[1.1] mb-4">
               Хэрэгцээндээ тохирсон<br />багцаа сонгоорой
             </h2>
-            <p style={{ fontFamily: F, fontSize: "0.95rem", color: "#6e6e73", maxWidth: 460, margin: "0 auto", lineHeight: 1.75 }}>
+            <p className="text-[0.95rem] text-[#6e6e73] max-w-[460px] mx-auto leading-[1.75]">
               Эхний нэг удаагийн туршилт үнэгүй. Дараагийн хэрэглээнд сарын багц шаардлагатай.
             </p>
           </div>
 
-          {/* Cards — responsive: 1 col mobile, 2 col desktop */}
-          <div style={{ display: "grid", gap: 18, maxWidth: 820, margin: "0 auto", gridTemplateColumns: "1fr" }} className="md:grid-cols-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-[18px] max-w-[820px] mx-auto">
             <PricingCard
               name="Basic" price="19,999" tag="/ сар" href="/login" cta="Basic эхлэх →" animDelay="100ms"
               features={[
@@ -329,27 +340,25 @@ export default function Home() {
             />
           </div>
 
-          {/* Free trial note */}
-          <div className="anim-fade-in delay-500" style={{ textAlign: "center", marginTop: 28 }}>
-            <p style={{ fontFamily: F, fontSize: "0.82rem", color: "#aeaeb2" }}>
+          <div className="anim-fade-in delay-500 text-center mt-7">
+            <p className="text-[0.82rem] text-[#aeaeb2]">
               Эхний нэг анализ үнэгүй · Нэвтэрч орсны дараа · Дурдсан үед цуцлах боломжтой
             </p>
           </div>
         </section>
 
         {/* ══ FOOTER STATS ════════════════════════════════ */}
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px 56px" }} className="md:px-12 lg:px-20">
-          <div className="anim-fade-up delay-200" style={{
-            background: "rgba(255,255,255,0.78)",
-            backdropFilter: "blur(24px) saturate(1.6)",
-            WebkitBackdropFilter: "blur(24px) saturate(1.6)",
-            borderRadius: 22,
-            border: "1px solid rgba(255,255,255,0.95)",
-            boxShadow: "0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 24px rgba(0,0,0,0.06)",
-            padding: "22px 28px",
-            display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16,
-          }}>
-            <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
+        <div className="max-w-[1200px] mx-auto px-5 md:px-12 lg:px-20 pb-14">
+          <div
+            className="anim-fade-up delay-200 rounded-[22px] border border-[rgba(255,255,255,0.95)] px-7 py-[22px] flex flex-wrap items-center justify-between gap-4"
+            style={{
+              background: "rgba(255,255,255,0.78)",
+              backdropFilter: "blur(24px) saturate(1.6)",
+              WebkitBackdropFilter: "blur(24px) saturate(1.6)",
+              boxShadow: "0 1px 0 rgba(255,255,255,0.9) inset, 0 4px 24px rgba(0,0,0,0.06)",
+            }}
+          >
+            <div className="flex gap-8 flex-wrap">
               {[
                 { num: "500+", label: "Хэрэглэгч" },
                 { num: "2",    label: "Багц сонголт" },
@@ -357,12 +366,12 @@ export default function Home() {
                 { num: "30s",  label: "Үр дүн авах хугацаа" },
               ].map((s) => (
                 <div key={s.label}>
-                  <p style={{ fontFamily: F, fontSize: "1.45rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#1c1c1e", margin: 0 }}>{s.num}</p>
-                  <p style={{ fontFamily: F, fontSize: "0.67rem", fontWeight: 600, letterSpacing: "0.09em", textTransform: "uppercase", color: "#aeaeb2", marginTop: 2 }}>{s.label}</p>
+                  <p className="text-[1.45rem] font-extrabold tracking-[-0.02em] text-[#1c1c1e]">{s.num}</p>
+                  <p className="label-style mt-0.5">{s.label}</p>
                 </div>
               ))}
             </div>
-            <p style={{ fontFamily: F, fontSize: "0.74rem", color: "#c7c7cc", margin: 0 }}>© 2026 Looka · Монгол</p>
+            <p className="text-[0.74rem] text-[#c7c7cc]">© 2026 Looka · Монгол</p>
           </div>
         </div>
 

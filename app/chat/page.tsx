@@ -1,8 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 
-const F = "var(--font-montserrat), 'Helvetica Neue', Arial, sans-serif";
-
 type Message = { role: "user" | "ai"; text: string };
 
 const QUICK = [
@@ -34,7 +32,7 @@ function getResponse(text: string) {
 function renderText(text: string) {
   return text.split("\n").map((line, i) => {
     const html = line.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-    return <p key={i} style={{ marginBottom: 4, fontFamily: F }} dangerouslySetInnerHTML={{ __html: html }} />;
+    return <p key={i} className="mb-1" dangerouslySetInnerHTML={{ __html: html }} />;
   });
 }
 
@@ -60,66 +58,75 @@ export default function ChatPage() {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 56px)", fontFamily: F, padding: "0 24px" }} className="md:px-12 lg:px-20">
+    <div className="flex flex-col h-[calc(100vh-56px)] px-6 md:px-12 lg:px-20">
 
       {/* Header */}
-      <div style={{ paddingTop: 40, flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 20 }}>
+      <div className="pt-10 shrink-0">
+        <div className="flex items-end justify-between mb-5">
           <div>
-            <span style={{ fontFamily: F, fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9333ea", display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 13px", borderRadius: 999, background: "rgba(147,51,234,0.08)", border: "1px solid rgba(147,51,234,0.2)", marginBottom: 16 }}>
+            <span className="label-style inline-flex items-center gap-[6px] px-[13px] py-[5px] rounded-full bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] text-[#9333ea] mb-4">
               ✦ &nbsp;04 · Premium
             </span>
-            <h1 style={{ fontFamily: F, fontSize: "clamp(2.2rem,5vw,3.5rem)", fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.06, color: "#1c1c1e" }}>
-              <span style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>AI</span> Стилист
+            <h1 className="text-[clamp(2.2rem,5vw,3.5rem)] tracking-[-0.03em] leading-[1.06] text-[#1c1c1e]">
+              <span
+                className="bg-clip-text text-transparent"
+                style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
+              >AI</span> Стилист
             </h1>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }} className="hidden md:flex">
-            <p style={{ fontFamily: F, fontSize: "2rem", fontWeight: 800, color: "#1c1c1e", lineHeight: 1 }}>24/7</p>
-            <p style={{ fontFamily: F, fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8e8e93" }}>Онлайн зөвлөмж</p>
+          <div className="hidden md:flex flex-col items-end gap-1">
+            <p className="text-[2rem] font-extrabold text-[#1c1c1e] leading-none">24/7</p>
+            <p className="label-style">Онлайн зөвлөмж</p>
           </div>
         </div>
-        <div style={{ height: 1, background: "rgba(0,0,0,0.07)", marginBottom: 8 }} />
+        <div className="h-px bg-[rgba(0,0,0,0.07)] mb-2" />
       </div>
 
       {/* Quick prompts */}
-      <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "10px 0", flexShrink: 0 }}>
+      <div className="flex gap-2 overflow-x-auto py-[10px] shrink-0">
         {QUICK.map((p) => (
-          <button key={p} onClick={() => send(p)}
-            style={{ fontFamily: F, fontSize: "0.78rem", fontWeight: 500, color: "#6e6e73", background: "#fff", border: "1px solid rgba(0,0,0,0.08)", padding: "8px 16px", borderRadius: 999, whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer", transition: "all 0.15s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+          <button
+            key={p}
+            onClick={() => send(p)}
+            className="text-[0.78rem] font-medium text-[#6e6e73] bg-white border border-[rgba(0,0,0,0.08)] px-4 py-2 rounded-full whitespace-nowrap shrink-0 cursor-pointer transition-all duration-150 shadow-[0_1px_4px_rgba(0,0,0,0.04)]"
+          >
             {p}
           </button>
         ))}
       </div>
 
       {/* Messages */}
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 16, padding: "12px 0" }}>
+      <div className="flex-1 overflow-y-auto flex flex-col gap-4 py-3">
         {messages.map((m, i) => (
-          <div key={i} style={{ display: "flex", gap: 12, justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
+          <div key={i} className={`flex gap-3 ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             {m.role === "ai" && (
-              <div style={{ width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2, background: "rgba(147,51,234,0.1)", border: "1px solid rgba(147,51,234,0.2)" }}>
-                <span style={{ color: "#9333ea", fontSize: "0.65rem" }}>✦</span>
+              <div className="w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0 mt-0.5 bg-[rgba(147,51,234,0.1)] border border-[rgba(147,51,234,0.2)]">
+                <span className="text-[#9333ea] text-[0.65rem]">✦</span>
               </div>
             )}
-            <div style={{
-              maxWidth: "78%", padding: "14px 18px", fontSize: "0.9rem", lineHeight: 1.7,
-              borderRadius: m.role === "user" ? "20px 20px 5px 20px" : "20px 20px 20px 5px",
-              background: m.role === "user" ? "#1c1c1e" : "#fff",
-              color: m.role === "user" ? "#fff" : "#1c1c1e",
-              border: m.role === "user" ? "none" : "1px solid rgba(0,0,0,0.07)",
-              boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
-            }}>
+            <div
+              className="max-w-[78%] px-[18px] py-[14px] text-[0.9rem] leading-[1.7] shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+              style={{
+                borderRadius: m.role === "user" ? "20px 20px 5px 20px" : "20px 20px 20px 5px",
+                background: m.role === "user" ? "#1c1c1e" : "#fff",
+                color: m.role === "user" ? "#fff" : "#1c1c1e",
+                border: m.role === "user" ? "none" : "1px solid rgba(0,0,0,0.07)",
+              }}
+            >
               {m.role === "ai" ? renderText(m.text) : m.text}
             </div>
           </div>
         ))}
 
         {loading && (
-          <div style={{ display: "flex", gap: 12, justifyContent: "flex-start" }}>
-            <div style={{ width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "rgba(147,51,234,0.1)", border: "1px solid rgba(147,51,234,0.2)" }}>
-              <span style={{ color: "#9333ea", fontSize: "0.65rem" }}>✦</span>
+          <div className="flex gap-3 justify-start">
+            <div className="w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0 bg-[rgba(147,51,234,0.1)] border border-[rgba(147,51,234,0.2)]">
+              <span className="text-[#9333ea] text-[0.65rem]">✦</span>
             </div>
-            <div style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.07)", padding: "14px 18px", borderRadius: "20px 20px 20px 5px", display: "flex", alignItems: "center", gap: 8, boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-              {[0,1,2].map((i) => <span key={i} className="animate-dot-blink" style={{ width: 7, height: 7, borderRadius: "50%", background: "#9333ea", display: "inline-block", animationDelay: `${i*0.15}s` }} />)}
+            <div className="bg-white border border-[rgba(0,0,0,0.07)] px-[18px] py-[14px] rounded-[20px_20px_20px_5px] flex items-center gap-2 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+              {[0,1,2].map((i) => (
+                <span key={i} className="animate-dot-blink w-[7px] h-[7px] rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.15}s` }} />
+              ))}
             </div>
           </div>
         )}
@@ -127,29 +134,27 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <div style={{ padding: "12px 0 20px", flexShrink: 0, borderTop: "1px solid rgba(0,0,0,0.07)" }}>
-        <div style={{ display: "flex", gap: 10 }}>
+      <div className="py-3 pb-5 shrink-0 border-t border-[rgba(0,0,0,0.07)]">
+        <div className="flex gap-[10px]">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send(input)}
             placeholder="Асуултаа бич..."
-            style={{
-              flex: 1, background: "#fff", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 16,
-              padding: "14px 20px", fontSize: "0.9rem", fontFamily: F, color: "#1c1c1e",
-              outline: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-            }}
+            className="flex-1 bg-white border border-[rgba(0,0,0,0.1)] rounded-[16px] px-5 py-[14px] text-[0.9rem] text-[#1c1c1e] outline-none shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
           />
           <button
             onClick={() => send(input)}
             disabled={!input.trim() || loading}
+            className="px-[22px] py-[14px] rounded-[14px] text-[0.9rem] font-bold border-none transition-all duration-150"
             style={{
-              padding: "14px 22px", borderRadius: 14, fontFamily: F, fontSize: "0.9rem", fontWeight: 700, border: "none", cursor: input.trim() ? "pointer" : "not-allowed", transition: "all 0.15s",
               background: input.trim() ? "#1c1c1e" : "rgba(0,0,0,0.06)",
               color: input.trim() ? "#fff" : "#aeaeb2",
+              cursor: input.trim() ? "pointer" : "not-allowed",
               boxShadow: input.trim() ? "0 4px 12px rgba(0,0,0,0.18)" : "none",
-            }}>
+            }}
+          >
             →
           </button>
         </div>

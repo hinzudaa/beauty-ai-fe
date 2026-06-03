@@ -6,8 +6,6 @@ import { otpStart, otpVerify } from "@/apis";
 import { ApiError, tokenStore } from "@/utils/request";
 import type { OtpStartResponse, AuthResponse } from "@/types/auth";
 
-const F = "var(--font-montserrat), 'Helvetica Neue', Arial, sans-serif";
-
 export default function LoginPage() {
   const [step, setStep]       = useState<"phone" | "otp">("phone");
   const [phone, setPhone]     = useState("");
@@ -58,63 +56,64 @@ export default function LoginPage() {
   function handleRetry() { setStep("phone"); setSession(null); setError(""); }
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-
-  const inputStyle: React.CSSProperties = {
-    width: "100%", fontFamily: F, fontSize: "0.95rem", fontWeight: 500,
-    background: "#fff", border: "1px solid rgba(0,0,0,0.12)", borderRadius: 14,
-    padding: "14px 18px", color: "#1c1c1e", outline: "none",
-    boxSizing: "border-box", boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-  };
+  const disabled = busy || !phone;
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", fontFamily: F, background: "#f2f2f7" }}>
-      <div style={{ width: "100%", maxWidth: 380 }}>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#f2f2f7]">
+      <div className="w-full max-w-[380px]">
 
         {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 40 }}>
-          <span style={{ color: "#9333ea", fontSize: "1rem" }}>✦</span>
-          <span style={{ fontFamily: F, fontWeight: 800, fontSize: "1.3rem", letterSpacing: "-0.02em", color: "#1c1c1e" }}>Beauty AI</span>
+        <div className="flex items-center justify-center gap-[10px] mb-10">
+          <span className="text-[#9333ea] text-base">✦</span>
+          <span className="font-extrabold text-[1.3rem] tracking-[-0.02em] text-[#1c1c1e]">Beauty AI</span>
         </div>
 
         {/* Card */}
-        <div style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.95)", borderRadius: 24, boxShadow: "0 4px 32px rgba(0,0,0,0.08)", padding: "36px 32px" }}>
+        <div
+          className="rounded-[24px] px-8 py-9 border border-[rgba(255,255,255,0.95)] shadow-[0_4px_32px_rgba(0,0,0,0.08)]"
+          style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}
+        >
 
           {step === "phone" && (
             <>
-              <div style={{ textAlign: "center", marginBottom: 28 }}>
-                <h1 style={{ fontFamily: F, fontSize: "1.8rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#1c1c1e", lineHeight: 1.1 }}>Нэвтрэх</h1>
-                <p style={{ marginTop: 8, fontFamily: F, fontSize: "0.9rem", fontWeight: 500, color: "#8e8e93" }}>Утасны дугаараа оруулна уу</p>
+              <div className="text-center mb-7">
+                <h1 className="text-[1.8rem] tracking-[-0.02em] leading-[1.1]">Нэвтрэх</h1>
+                <p className="mt-2 text-[0.9rem] font-medium text-[#8e8e93]">Утасны дугаараа оруулна уу</p>
               </div>
 
-              <form onSubmit={handleSend} style={{ display: "flex", flexDirection: "column", gap: 12 }} noValidate>
+              <form onSubmit={handleSend} className="flex flex-col gap-3" noValidate>
                 <div>
-                  <label style={{ fontFamily: F, fontSize: "0.68rem", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8e8e93", display: "block", marginBottom: 8 }}>
-                    Утасны дугаар
-                  </label>
+                  <label className="label-style block mb-2">Утасны дугаар</label>
                   <input
                     type="tel" inputMode="numeric" placeholder="99001234"
                     value={phone}
                     onChange={(e) => { setPhone(e.target.value.replace(/\D/g, "")); setError(""); }}
-                    style={inputStyle}
+                    className="w-full text-[0.95rem] font-medium bg-white border border-[rgba(0,0,0,0.12)] rounded-[14px] px-[18px] py-[14px] text-[#1c1c1e] outline-none shadow-[0_1px_4px_rgba(0,0,0,0.05)]"
                     autoComplete="tel" maxLength={16} autoFocus
                   />
                 </div>
 
-                {error && <p style={{ fontFamily: F, fontSize: "0.8rem", color: "#ef4444", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 10, padding: "10px 14px" }}>{error}</p>}
+                {error && (
+                  <p className="text-[0.8rem] text-[#ef4444] bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.15)] rounded-[10px] px-[14px] py-[10px]">
+                    {error}
+                  </p>
+                )}
 
-                <button type="submit" disabled={busy || !phone}
+                <button
+                  type="submit" disabled={disabled}
+                  className="mt-1 w-full py-[14px] rounded-full text-[0.9rem] font-bold tracking-[0.04em] border-none transition-all duration-150"
                   style={{
-                    marginTop: 4, width: "100%", padding: "14px 0", borderRadius: 999,
-                    fontFamily: F, fontSize: "0.9rem", fontWeight: 700, letterSpacing: "0.04em", border: "none",
-                    cursor: busy || !phone ? "not-allowed" : "pointer",
-                    background: busy || !phone ? "rgba(0,0,0,0.08)" : "#1c1c1e",
-                    color: busy || !phone ? "#aeaeb2" : "#fff",
-                    boxShadow: busy || !phone ? "none" : "0 4px 16px rgba(0,0,0,0.18)",
-                    transition: "all 0.15s",
-                  }}>
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    background: disabled ? "rgba(0,0,0,0.08)" : "#1c1c1e",
+                    color: disabled ? "#aeaeb2" : "#fff",
+                    boxShadow: disabled ? "none" : "0 4px 16px rgba(0,0,0,0.18)",
+                  }}
+                >
                   {busy ? (
-                    <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                      {[0,1,2].map((i) => <span key={i} className="animate-dot-blink" style={{ width: 6, height: 6, borderRadius: "50%", background: "#aeaeb2", display: "inline-block", animationDelay: `${i*0.15}s` }} />)}
+                    <span className="flex items-center justify-center gap-[6px]">
+                      {[0,1,2].map((i) => (
+                        <span key={i} className="animate-dot-blink w-[6px] h-[6px] rounded-full bg-[#aeaeb2] inline-block" style={{ animationDelay: `${i*0.15}s` }} />
+                      ))}
                     </span>
                   ) : "Код авах →"}
                 </button>
@@ -124,36 +123,46 @@ export default function LoginPage() {
 
           {step === "otp" && session && (
             <>
-              <div style={{ textAlign: "center", marginBottom: 24 }}>
-                <h1 style={{ fontFamily: F, fontSize: "1.6rem", fontWeight: 800, letterSpacing: "-0.02em", color: "#1c1c1e", lineHeight: 1.15 }}>SMS илгээнэ үү</h1>
-                <p style={{ marginTop: 8, fontFamily: F, fontSize: "0.9rem", fontWeight: 500, color: "#8e8e93" }}>
-                  <span style={{ color: "#1c1c1e", fontWeight: 700 }}>{phone}</span> дугаараас
+              <div className="text-center mb-6">
+                <h1 className="text-[1.6rem] tracking-[-0.02em] leading-[1.15]">SMS илгээнэ үү</h1>
+                <p className="mt-2 text-[0.9rem] font-medium text-[#8e8e93]">
+                  <span className="text-[#1c1c1e] font-bold">{phone}</span> дугаараас
                 </p>
               </div>
 
-              <div style={{ background: "#f5f5f7", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 16, padding: 20, marginBottom: 16, textAlign: "center" }}>
-                <p style={{ fontFamily: F, fontSize: "0.9rem", fontWeight: 500, color: "#3a3a3c", lineHeight: 1.7, marginBottom: 16 }}>
+              <div className="bg-[#f5f5f7] border border-[rgba(0,0,0,0.06)] rounded-[16px] p-5 mb-4 text-center">
+                <p className="text-[0.9rem] font-medium text-[#3a3a3c] leading-[1.7] mb-4">
                   {session.displayInstruction}
                 </p>
-                <a href={session.smsUri}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#1c1c1e", color: "#fff", fontFamily: F, fontSize: "0.9rem", fontWeight: 700, padding: "12px 24px", borderRadius: 999, textDecoration: "none", boxShadow: "0 4px 14px rgba(0,0,0,0.2)" }}>
+                <a
+                  href={session.smsUri}
+                  className="inline-flex items-center gap-2 bg-[#1c1c1e] text-white text-[0.9rem] font-bold px-6 py-3 rounded-full shadow-[0_4px_14px_rgba(0,0,0,0.2)]"
+                >
                   <span>✉</span> SMS нээх
                 </a>
-                <p style={{ marginTop: 12, fontFamily: F, fontSize: "0.72rem", color: "#aeaeb2" }}>Гар утас дээр дарна уу</p>
+                <p className="mt-3 text-[0.72rem] text-[#aeaeb2]">Гар утас дээр дарна уу</p>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 16 }}>
-                <span style={{ display: "flex", gap: 6 }}>
-                  {[0,1,2].map((i) => <span key={i} className="animate-dot-blink" style={{ width: 6, height: 6, borderRadius: "50%", background: "#9333ea", display: "inline-block", animationDelay: `${i*0.2}s` }} />)}
+              <div className="flex items-center justify-center gap-[10px] mb-4">
+                <span className="flex gap-[6px]">
+                  {[0,1,2].map((i) => (
+                    <span key={i} className="animate-dot-blink w-[6px] h-[6px] rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.2}s` }} />
+                  ))}
                 </span>
-                <span style={{ fontFamily: F, fontSize: "0.82rem", color: "#8e8e93" }}>Хүлээж байна...</span>
-                {secondsLeft > 0 && <span style={{ fontFamily: F, fontSize: "0.8rem", color: "#aeaeb2" }}>{fmt(secondsLeft)}</span>}
+                <span className="text-[0.82rem] text-[#8e8e93]">Хүлээж байна...</span>
+                {secondsLeft > 0 && <span className="text-[0.8rem] text-[#aeaeb2]">{fmt(secondsLeft)}</span>}
               </div>
 
-              {error && <p style={{ fontFamily: F, fontSize: "0.8rem", color: "#ef4444", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 10, padding: "10px 14px", textAlign: "center", marginBottom: 12 }}>{error}</p>}
+              {error && (
+                <p className="text-[0.8rem] text-[#ef4444] bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.15)] rounded-[10px] px-[14px] py-[10px] text-center mb-3">
+                  {error}
+                </p>
+              )}
 
-              <button onClick={handleRetry}
-                style={{ width: "100%", padding: "12px 0", background: "transparent", border: "1px solid rgba(0,0,0,0.1)", borderRadius: 999, fontFamily: F, fontSize: "0.87rem", fontWeight: 600, color: "#6e6e73", cursor: "pointer" }}>
+              <button
+                onClick={handleRetry}
+                className="w-full py-3 bg-transparent border border-[rgba(0,0,0,0.1)] rounded-full text-[0.87rem] font-semibold text-[#6e6e73] cursor-pointer"
+              >
                 ← Дугаар солих
               </button>
             </>
