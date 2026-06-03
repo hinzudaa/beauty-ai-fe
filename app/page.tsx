@@ -3,7 +3,7 @@ import Link from "next/link";
 function CardVideo({ src }: { src: string }) {
   return (
     <video
-      src={src}
+      src={src} 
       className="absolute inset-0 h-full w-full object-cover"
       autoPlay muted loop playsInline
     />
