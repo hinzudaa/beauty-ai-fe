@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { runFullAnalysis, fileToDataUrl, FullAnalysisResult } from "@/apis/analyze";
 import { createSubscriptionInvoice, checkPayment, InvoiceResponse, QPayUrl } from "@/apis/payment";
 import { getProfile, ProfileData } from "@/apis/profile";
+import { getPrices } from "@/apis/prices";
 import { tokenStore } from "@/utils/request";
 import { photoStore } from "@/utils/photoStore";
 
@@ -20,11 +21,10 @@ const OCCASIONS = [
   { id: "study",     label: "Сурлага",          icon: "🎓", sub: "School"       },
 ];
 
-const PLANS = [
+const PLAN_META = [
   {
     id:       "basic" as const,
     name:     "Basic",
-    price:    "19,999",
     limit:    20,
     features: ["Сард 20 шинжилгээ", "Нүүр + Үс + Хувцас нэгэн зэрэг", "Бүрэн AI дүн шинжилгээ", "Look татаж авах, хадгалах"],
     color:    "#3b82f6",
@@ -32,7 +32,6 @@ const PLANS = [
   {
     id:        "pro" as const,
     name:      "Pro",
-    price:     "29,999",
     limit:     40,
     features:  ["Сард 40 шинжилгээ", "AI Personal Stylist Chat", "Бүх Basic боломжууд", "Хамгийн өндөр нарийвчлал"],
     color:     "#9333ea",
@@ -52,7 +51,16 @@ export default function AnalyzePage() {
   const [result, setResult]           = useState<FullAnalysisResult | null>(null);
   const [activeTab, setActiveTab]     = useState<ResultTab>("face");
   const [hairTab, setHairTab]         = useState<"hair" | "makeup">("hair");
+  const [prices, setPrices]           = useState({ basic: 19999, pro: 29999 });
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch live prices from admin settings whenever subscribe step opens
+  useEffect(() => {
+    if (step !== "subscribe") return;
+    getPrices()
+      .then((p) => setPrices({ basic: p.basicPrice, pro: p.proPrice }))
+      .catch(() => {/* keep defaults */});
+  }, [step]);
 
   async function handleFile(file: File) {
     const obj = URL.createObjectURL(file);
@@ -249,7 +257,7 @@ export default function AnalyzePage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {PLANS.map((plan) => (
+              {PLAN_META.map((plan) => (
                 <button key={plan.id} onClick={() => setSelectedPlan(plan.id)}
                   className="p-6 rounded-[22px] text-left transition-all relative overflow-hidden"
                   style={{
@@ -268,7 +276,7 @@ export default function AnalyzePage() {
                   </div>
                   <p className="text-[2rem] font-extrabold leading-none mb-1"
                     style={{ color: plan.highlight && selectedPlan === plan.id ? "#fff" : "#1c1c1e" }}>
-                    ₮{plan.price}
+                    ₮{(plan.id === "basic" ? prices.basic : prices.pro).toLocaleString()}
                   </p>
                   <p className="text-[0.78rem] mb-4"
                     style={{ color: plan.highlight && selectedPlan === plan.id ? "rgba(255,255,255,0.4)" : "#8e8e93" }}>

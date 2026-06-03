@@ -1,5 +1,6 @@
 import Link from "next/link";
 import UploadHero from "@/components/UploadHero";
+import { getPrices } from "@/apis/prices";
 
 function ScanDot({ x, y, delay = "0s" }: { x: string; y: string; delay?: string }) {
   return (
@@ -114,7 +115,8 @@ function PricingCard({ name, price, tag, features, cta, href, highlight = false,
   );
 }
 
-export default function Home() {
+export default async function Home() {
+  const { basicPrice, proPrice } = await getPrices();
   return (
     <div className="bg-[#f2f2f7] min-h-screen">
 
@@ -315,7 +317,7 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-[18px] max-w-[820px] mx-auto">
             <PricingCard
-              name="Basic" price="19,999" tag="/ сар" href="/login" cta="Basic эхлэх →" animDelay="100ms"
+              name="Basic" price={basicPrice.toLocaleString()} tag="/ сар" href="/login" cta="Basic эхлэх →" animDelay="100ms"
               features={[
                 "Сард 20 зураг upload",
                 "Бүрэн AI нүүрний шинжилгээ",
@@ -327,7 +329,7 @@ export default function Home() {
               ]}
             />
             <PricingCard
-              name="Pro" price="29,999" tag="/ сар" href="/login" cta="Pro эхлэх →" highlight animDelay="200ms"
+              name="Pro" price={proPrice.toLocaleString()} tag="/ сар" href="/login" cta="Pro эхлэх →" highlight animDelay="200ms"
               features={[
                 "Сард 40 зураг upload",
                 "AI Personal Stylist Chat",
