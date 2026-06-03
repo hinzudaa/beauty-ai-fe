@@ -1,24 +1,13 @@
 "use client";
+
 import Image from "next/image";
 import { useState, useRef } from "react";
+import { analyzeImage, fileToDataUrl, AnalyzeResult } from "@/apis/analyze";
+import { tokenStore } from "@/utils/request";
 
 const BADGE = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.06] border border-white/[0.1] text-white/60 text-[0.68rem] tracking-[0.14em] uppercase font-medium font-sans";
 const LABEL = "text-[0.68rem] tracking-[0.18em] uppercase font-medium text-white/30 font-sans";
 const CARD  = "bg-white/[0.04] border border-white/[0.07] rounded-[20px] backdrop-blur-xl";
-
-const MOCK = {
-  faceShape: "Зууван (Oval)",
-  skinTone: "Дулаан дунд",
-  styleType: "Байгалийн минималист",
-  recommendations: [
-    "V-neck болон off-shoulder загвар таны нүүрний хэлбэрт хамгийн тохиромжтой.",
-    "Drop болон hoop earring — jaw line-ийг онцолно.",
-    "Terracotta, camel, olive өнгөнүүд арьсны тонд яг нийцнэ.",
-    "Structured blazer + wide-leg trousers — таны style type-д бүрэн тохирно.",
-    "Нэг том jewelry piece сонго, олон давхарлахаас зайлс.",
-  ],
-  colorPalette: ["#c8956c", "#8b6f47", "#6b7c5c", "#d4a853", "#a0522d"],
-};
 
 const FEATURES = [
   { icon: "◈", label: "Нүүрний хэлбэр", desc: "Oval, round, square, heart — AI тодорхойлно" },
@@ -27,18 +16,52 @@ const FEATURES = [
 ];
 
 export default function AnalyzePage() {
-  const [preview, setPreview] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<typeof MOCK | null>(null);
+  const [preview, setPreview]   = useState<string | null>(null);
+  const [dataUrl, setDataUrl]   = useState<string | null>(null);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+  const [result, setResult]     = useState<AnalyzeResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  function handleFile(file: File) { setPreview(URL.createObjectURL(file)); setResult(null); }
-  function analyze() { setLoading(true); setTimeout(() => { setLoading(false); setResult(MOCK); }, 2200); }
+  async function handleFile(file: File) {
+    setPreview(URL.createObjectURL(file));
+    setResult(null);
+    setError(null);
+    const url = await fileToDataUrl(file);
+    setDataUrl(url);
+  }
+
+  async function analyze() {
+    if (!dataUrl) return;
+
+    const token = tokenStore.get();
+    if (!token) {
+      setError("Эхлээд нэвтэрнэ үү");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await analyzeImage(dataUrl);
+      setResult(res);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Шинжилгээ хийхэд алдаа гарлаа");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function reset() {
+    setPreview(null);
+    setDataUrl(null);
+    setResult(null);
+    setError(null);
+  }
 
   return (
     <div className="min-h-screen px-6 md:px-12 lg:px-20 pt-16 pb-24">
 
-      {/* ── TOP HERO ── */}
       <section className="mb-16">
         <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
           <div className="max-w-2xl">
@@ -59,10 +82,8 @@ export default function AnalyzePage() {
         <div className="mt-10 h-px w-full bg-gradient-to-r from-white/20 via-white/5 to-transparent" />
       </section>
 
-      {/* ── MAIN SPLIT ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
 
-        {/* LEFT — upload + action */}
         <div className="space-y-4">
           <div
             className={`rounded-[24px] cursor-pointer transition-all overflow-hidden ${
@@ -113,10 +134,16 @@ export default function AnalyzePage() {
             </button>
           )}
 
+          {error && !loading && (
+            <p className="text-xs text-red-400 font-sans py-2.5 px-4 rounded-xl bg-red-500/[0.08] border border-red-500/[0.15] text-center">
+              {error}
+            </p>
+          )}
+
           {loading && (
             <div className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] p-10 text-center`}>
               <div className="flex gap-2.5 justify-center mb-5">
-                {[0,1,2].map((i) => (
+                {[0, 1, 2].map((i) => (
                   <span key={i} className="w-2 h-2 rounded-full inline-block bg-white animate-dot-blink"
                     style={{ animationDelay: `${i * 0.18}s` }} />
                 ))}
@@ -127,7 +154,7 @@ export default function AnalyzePage() {
           )}
 
           {result && (
-            <button onClick={() => { setPreview(null); setResult(null); }}
+            <button onClick={reset}
               className="w-full py-3.5 bg-white/[0.06] text-white/60 border border-white/[0.08] rounded-full hover:text-white hover:border-white/[0.18] transition-all font-sans text-sm"
               style={{ letterSpacing: "0.08em" }}>
               Дахин шинжлэх
@@ -135,14 +162,13 @@ export default function AnalyzePage() {
           )}
         </div>
 
-        {/* RIGHT — info panel or results */}
         {!result && !loading && (
           <div className="space-y-4 lg:pt-2">
             <p className={`${LABEL} mb-5`}>Юу тодорхойлогдох вэ</p>
             {FEATURES.map((f) => (
               <div key={f.label}
-                className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] flex gap-5 p-5 hover:bg-white/[0.07] hover:border-white/[0.14] transition-all group`}>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/[0.06] border border-white/[0.1] shrink-0 transition-colors">
+                className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] flex gap-5 p-5 hover:bg-white/[0.07] hover:border-white/[0.14] transition-all`}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/[0.06] border border-white/[0.1] shrink-0">
                   <span className="text-white/60 text-sm">{f.icon}</span>
                 </div>
                 <div>
@@ -176,7 +202,7 @@ export default function AnalyzePage() {
 
             <div className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] p-5`}>
               <p className={`${LABEL} mb-4`}>Өнгөний палет</p>
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap">
                 {result.colorPalette.map((c) => (
                   <div key={c} className="flex flex-col items-center gap-2">
                     <div className="w-10 h-10 rounded-[16px] border border-white/10 shadow-md" style={{ background: c }} />
