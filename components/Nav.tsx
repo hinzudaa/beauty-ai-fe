@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "../lib/AuthContext";
+import { useAuth } from "@/lib/AuthContext";
 
 const links = [
   { href: "/analyze",        label: "Шинжилгээ" },

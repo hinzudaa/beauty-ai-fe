@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Nav from "./components/Nav";
-import { AuthProvider } from "./lib/AuthContext";
+import { AuthProvider } from "@/lib/AuthContext";
+import Nav from "@/components/Nav";
 
 export const metadata: Metadata = {
   title: "Beauty AI Platform",

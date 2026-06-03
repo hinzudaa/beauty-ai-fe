@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../lib/AuthContext";
-import { apiOtpStart, apiOtpVerify, ApiError, OtpStartResponse, AuthResponse } from "../lib/api";
+import { useAuth } from "@/lib/AuthContext";
+import { otpStart, otpVerify } from "@/apis";
+import { ApiError } from "@/utils/request";
+import type { OtpStartResponse, AuthResponse } from "@/types/auth";
 
 export default function LoginPage() {
   const { login, user, loading } = useAuth();
@@ -42,7 +44,7 @@ export default function LoginPage() {
 
     pollRef.current = setInterval(async () => {
       try {
-        const res = await apiOtpVerify(session.sessionId);
+        const res = await otpVerify(session.sessionId);
         if ("token" in res) {
           clearInterval(pollRef.current!);
           login((res as AuthResponse).token, (res as AuthResponse).user);
@@ -71,7 +73,7 @@ export default function LoginPage() {
     }
     setBusy(true);
     try {
-      const res = await apiOtpStart(phone);
+      const res = await otpStart(phone);
       setSession(res);
       setStep("otp");
     } catch (err) {
