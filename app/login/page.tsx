@@ -30,7 +30,13 @@ export default function LoginPage() {
       try {
         const data = await otpVerify(sessionId);
         if (cancelled) return;
-        if ("token" in data) { const res = data as AuthResponse; tokenStore.set(res.token); window.location.href = "/"; return; }
+        if ("token" in data) {
+          const res = data as AuthResponse;
+          tokenStore.set(res.token);
+          const next = new URLSearchParams(window.location.search).get("next");
+          window.location.href = next ? decodeURIComponent(next) : "/";
+          return;
+        }
         if (Date.now() < expiresAt + 2_000) { timer = setTimeout(check, 3_000); }
         else { setError("OTP хугацаа дууссан. Дахин оролдоно уу."); setStep("phone"); setSession(null); }
       } catch (err) {

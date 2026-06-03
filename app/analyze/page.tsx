@@ -1,15 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { runFullAnalysis, fileToDataUrl, FullAnalysisResult } from "@/apis/analyze";
 import { createSubscriptionInvoice, checkPayment, InvoiceResponse, QPayUrl } from "@/apis/payment";
 import { getProfile, ProfileData } from "@/apis/profile";
 import { getPrices } from "@/apis/prices";
-import { tokenStore, ApiError } from "@/utils/request";
+import { tokenStore } from "@/utils/request";
 import { photoStore } from "@/utils/photoStore";
 
-type Step = "upload" | "occasion" | "subscribe" | "payment" | "analyzing" | "result";
+/**
+ * Step order:
+ *   checking → (no sub) subscribe → payment → upload → occasion → analyzing → result
+ *   checking → (has sub)                       upload → occasion → analyzing → result
+ */
+type Step      = "checking" | "subscribe" | "payment" | "upload" | "occasion" | "analyzing" | "result";
 type ResultTab = "face" | "hair" | "outfit";
 
 const OCCASIONS = [
@@ -26,21 +31,32 @@ const PLAN_META = [
     id:       "basic" as const,
     name:     "Basic",
     limit:    20,
-    features: ["Сард 20 шинжилгээ", "Нүүр + Үс + Хувцас нэгэн зэрэг", "Бүрэн AI дүн шинжилгээ", "Look татаж авах, хадгалах"],
-    color:    "#3b82f6",
+    features: [
+      "Сард 20 шинжилгээ",
+      "Нүүр · Үс & Грим · Хувцас — нэг дор",
+      "Бүрэн AI дүн шинжилгээ",
+      "Өнгөний палет & зөвлөмж",
+      "Хувцас хослол санал болгох",
+    ],
+    color: "#3b82f6",
   },
   {
     id:        "pro" as const,
     name:      "Pro",
     limit:     40,
-    features:  ["Сард 40 шинжилгээ", "AI Personal Stylist Chat", "Бүх Basic боломжууд", "Хамгийн өндөр нарийвчлал"],
+    features:  [
+      "Сард 40 шинжилгээ",
+      "AI Personal Stylist Chat",
+      "Бүх Basic боломжууд",
+      "Хамгийн өндөр нарийвчлал",
+    ],
     color:     "#9333ea",
     highlight: true,
   },
 ];
 
 export default function AnalyzePage() {
-  const [step, setStep]               = useState<Step>(() => photoStore.get() ? "occasion" : "upload");
+  const [step, setStep]               = useState<Step>("checking");
   const [preview, setPreview]         = useState<string | null>(() => photoStore.get()?.preview ?? null);
   const [dataUrl, setDataUrl]         = useState<string | null>(() => photoStore.get()?.dataUrl ?? null);
   const [occasion, setOccasion]       = useState("interview");
@@ -52,60 +68,57 @@ export default function AnalyzePage() {
   const [activeTab, setActiveTab]     = useState<ResultTab>("face");
   const [hairTab, setHairTab]         = useState<"hair" | "makeup">("hair");
   const [prices, setPrices]           = useState({ basic: 19999, pro: 29999 });
+  const [notLoggedIn, setNotLoggedIn] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch live prices from admin settings whenever subscribe step opens
+  /* ── On mount: check auth → subscription → route to correct first step ── */
   useEffect(() => {
-    if (step !== "subscribe") return;
+    // Read ?plan= param from URL (from home page pricing CTA)
+    const planParam = new URLSearchParams(window.location.search).get("plan");
+    if (planParam === "basic" || planParam === "pro") setSelectedPlan(planParam);
+
+    if (!tokenStore.get()) {
+      setNotLoggedIn(true);
+      setStep("subscribe");   // show plan cards even without auth; lock payment
+      return;
+    }
+
+    getProfile()
+      .then((p) => {
+        setProfile(p);
+        if (p.subscription?.status === "active") {
+          // Already subscribed → skip to upload
+          setStep(preview ? "occasion" : "upload");
+        } else {
+          setStep("subscribe");
+        }
+      })
+      .catch(() => setStep("subscribe"));
+
+    // Fetch live prices
     getPrices()
       .then((p) => setPrices({ basic: p.basicPrice, pro: p.proPrice }))
-      .catch(() => {/* keep defaults */});
-  }, [step]);
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  /* ── File upload ── */
   async function handleFile(file: File) {
     const obj = URL.createObjectURL(file);
     const du  = await fileToDataUrl(file);
-    setPreview(obj);
-    setDataUrl(du);
-    setError(null);
-    setResult(null);
+    setPreview(obj); setDataUrl(du);
+    setError(null); setResult(null);
     setStep("occasion");
   }
 
-  async function handleStart() {
-    if (!tokenStore.get()) { setError("Эхлээд нэвтэрнэ үү"); return; }
-    setError(null);
-    try {
-      const p = await getProfile();
-      setProfile(p);
-      if (p.subscription?.status === "active") {
-        await runAll();
-      } else {
-        setStep("subscribe");
-      }
-    } catch {
-      setError("Профайл мэдээлэл авахад алдаа гарлаа");
-    }
-  }
-
-  async function runAll() {
-    if (!dataUrl) return;
-    setStep("analyzing");
-    setError(null);
-    try {
-      const r = await runFullAnalysis(dataUrl, occasion);
-      setResult(r);
-      setActiveTab("face");
-      setStep("result");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Алдаа гарлаа";
-      if (msg === "needsSubscription") { setStep("subscribe"); }
-      else { setError(msg); setStep("occasion"); }
-    }
-  }
-
+  /* ── Subscribe → QPay ── */
   async function handleSubscribe() {
-    if (!selectedPlan || !tokenStore.get()) return;
+    if (!selectedPlan) return;
+    if (!tokenStore.get()) {
+      // Not logged in → redirect to login, come back here with plan pre-selected
+      window.location.href = `/login?next=${encodeURIComponent(window.location.pathname + window.location.search || `?plan=${selectedPlan}`)}`;
+      return;
+    }
     setError(null);
     try {
       const inv = await createSubscriptionInvoice(selectedPlan);
@@ -117,6 +130,7 @@ export default function AnalyzePage() {
     }
   }
 
+  /* ── Poll QPay until paid → go to upload ── */
   function pollPayment(invoiceId: string) {
     let cancelled = false;
     const timer = setInterval(async () => {
@@ -125,18 +139,33 @@ export default function AnalyzePage() {
         const s = await checkPayment(invoiceId);
         if (s.paid) {
           clearInterval(timer);
-          if (!cancelled) runAll();
+          if (!cancelled) setStep("upload");   // always go to upload after subscribing
         }
       } catch { /* keep polling */ }
     }, 3000);
-    // Cleanup: attach abort on next step change via a simple flag
-    setTimeout(() => { cancelled = true; clearInterval(timer); }, 10 * 60 * 1000); // 10 min timeout
+    setTimeout(() => { cancelled = true; clearInterval(timer); }, 10 * 60 * 1000);
   }
 
-  function reset() {
-    setStep("upload"); setPreview(null); setDataUrl(null);
-    setInvoice(null); setSelectedPlan(null); setError(null); setResult(null);
+  /* ── Run AI analysis ── */
+  const runAll = useCallback(async () => {
+    if (!dataUrl) return;
+    setStep("analyzing"); setError(null);
+    try {
+      const r = await runFullAnalysis(dataUrl, occasion);
+      setResult(r); setActiveTab("face"); setStep("result");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Алдаа гарлаа";
+      if (msg === "needsSubscription") { setStep("subscribe"); }
+      else { setError(msg); setStep("occasion"); }
+    }
+  }, [dataUrl, occasion]);
+
+  function resetToUpload() {
+    setPreview(null); setDataUrl(null); setResult(null); setError(null);
+    setStep("upload");
   }
+
+  /* ─────────────────── UI ─────────────────── */
 
   return (
     <div className="min-h-screen">
@@ -144,137 +173,82 @@ export default function AnalyzePage() {
 
         {/* Header */}
         <div className="mb-10">
-          <div className="flex items-center gap-3 mb-5 flex-wrap">
-            <span className="label-style inline-flex items-center gap-[6px] px-[13px] py-[5px] rounded-full bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] text-[#9333ea]">
-              ✦ &nbsp;AI Шинжилгээ · Бүрэн дүн
-            </span>
-            {step === "result" && result && (
-              <button onClick={() => setStep("occasion")}
-                className="ml-auto text-[0.8rem] font-semibold text-[#6e6e73] border border-[rgba(0,0,0,0.1)] rounded-full px-4 py-[6px] cursor-pointer bg-transparent">
-                Дахин шинжлэх
-              </button>
-            )}
-          </div>
-          <h1 className="text-[clamp(1.8rem,4vw,2.8rem)] tracking-[-0.03em] leading-[1.1]">
-            {step === "upload"    && "Зургаа оруулна уу"}
-            {step === "occasion"  && "Нөхцөл сонгох"}
+          <span className="label-style inline-flex items-center gap-[6px] px-[13px] py-[5px] rounded-full bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] text-[#9333ea] mb-5 block w-fit">
+            ✦ &nbsp;AI Шинжилгээ · Нүүр · Үс & Грим · Хувцас
+          </span>
+          <h1 className="text-[clamp(1.8rem,4vw,2.6rem)] tracking-[-0.03em] leading-[1.1]">
+            {step === "checking"  && "Уншиж байна..."}
             {step === "subscribe" && "Захиалга сонгох"}
             {step === "payment"   && "QPay төлбөр"}
+            {step === "upload"    && "Selfie оруулна уу"}
+            {step === "occasion"  && "Нөхцөл сонгох"}
             {step === "analyzing" && "Шинжилж байна..."}
             {step === "result"    && "Таны бүрэн дүн"}
           </h1>
-          {step === "upload" && (
+          {step === "subscribe" && (
             <p className="text-[0.9rem] text-[#6e6e73] mt-2">
-              Нүүрний шинжилгээ · Үс засал & Грим · Хувцаслалт — нэг дор
+              Сард 1 сарын захиалга авч, шинжилгээ хийлгэнэ үү
             </p>
           )}
         </div>
 
-        {/* ── Upload ── */}
-        {step === "upload" && (
-          <div
-            className="rounded-[24px] min-h-[380px] cursor-pointer border-2 border-dashed border-[rgba(147,51,234,0.25)] bg-[rgba(147,51,234,0.02)] flex flex-col items-center justify-center gap-6 p-12 transition-all"
-            onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.type.startsWith("image/")) handleFile(f); }}
-            onDragOver={(e) => e.preventDefault()}
-            onClick={() => inputRef.current?.click()}
-          >
-            <input ref={inputRef} type="file" accept="image/*" className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-            <div className="w-[88px] h-[88px] rounded-full flex items-center justify-center bg-[rgba(147,51,234,0.1)] border-2 border-[rgba(147,51,234,0.2)]">
-              <span className="text-[2.2rem]">📸</span>
-            </div>
-            <div className="text-center">
-              <p className="text-[1.15rem] font-bold text-[#1c1c1e] mb-2">Selfie оруулна уу</p>
-              <p className="text-[0.88rem] text-[#8e8e93]">JPG · PNG · WEBP · Урд тал харсан зураг хамгийн сайн</p>
-            </div>
+        {/* ── CHECKING ── */}
+        {step === "checking" && (
+          <div className="flex justify-center gap-3 py-20">
+            {[0,1,2].map((i) => (
+              <span key={i} className="animate-dot-blink w-3 h-3 rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.2}s` }} />
+            ))}
           </div>
         )}
 
-        {/* ── Occasion ── */}
-        {step === "occasion" && (
-          <div className="flex flex-col gap-5">
-            {/* Photo thumb */}
-            {preview && (
-              <div className="card flex items-center gap-4 p-4">
-                <Image src={preview} alt="preview" width={56} height={56} className="object-cover rounded-xl border border-[rgba(0,0,0,0.08)]" />
-                <div className="flex-1">
-                  <p className="text-[0.9rem] font-bold text-[#1c1c1e]">Зураг бэлэн</p>
-                  <p className="text-[0.78rem] text-[#8e8e93]">Доорх нөхцлөө сонгоод шинжлэх товчийг дарна уу</p>
-                </div>
-                <button onClick={reset} className="text-[0.75rem] text-[#aeaeb2] bg-transparent border-none cursor-pointer">Солих</button>
-              </div>
-            )}
-
-            <p className="label-style">Ямар нөхцөлд зориулж байна вэ? (хувцасны зөвлөмжид ашиглана)</p>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {OCCASIONS.map((o) => (
-                <button key={o.id} onClick={() => setOccasion(o.id)}
-                  className="p-[18px_14px] rounded-[16px] text-center cursor-pointer transition-all border-[1.5px]"
-                  style={{
-                    background:  occasion === o.id ? "rgba(147,51,234,0.07)" : "#fff",
-                    borderColor: occasion === o.id ? "rgba(147,51,234,0.35)" : "rgba(0,0,0,0.08)",
-                    boxShadow:   occasion === o.id ? "0 4px 16px rgba(147,51,234,0.12)" : "0 1px 4px rgba(0,0,0,0.04)",
-                  }}>
-                  <p className="text-[1.5rem] mb-2">{o.icon}</p>
-                  <p className="text-[0.82rem] font-bold text-[#1c1c1e] mb-[2px]">{o.label}</p>
-                  <p className="text-[0.7rem] text-[#8e8e93]">{o.sub}</p>
-                </button>
-              ))}
-            </div>
-
-            {error && <p className="text-[0.8rem] text-[#ef4444] bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.15)] rounded-xl px-4 py-[10px]">{error}</p>}
-
-            <div className="flex gap-3">
-              <button onClick={reset}
-                className="flex-1 py-[14px] bg-transparent border border-[rgba(0,0,0,0.1)] rounded-full font-semibold text-[0.9rem] text-[#6e6e73] cursor-pointer">
-                ← Буцах
-              </button>
-              <button onClick={handleStart}
-                className="flex-[2] py-[14px] border-none rounded-full font-bold text-[0.9rem] text-white cursor-pointer"
-                style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)", boxShadow: "0 4px 20px rgba(147,51,234,0.35)" }}>
-                Шинжлэх ✦
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Subscribe ── */}
+        {/* ── SUBSCRIBE — plan selection ── */}
         {step === "subscribe" && (
           <div className="flex flex-col gap-5">
-            <div className="card p-5 flex items-start gap-3">
-              <span className="text-[1.2rem] shrink-0">🔒</span>
-              <div>
-                <p className="text-[0.95rem] font-bold text-[#1c1c1e] mb-1">Захиалга шаардлагатай</p>
+
+            {/* Subscription info banner */}
+            <div className="card p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex-1">
+                <p className="text-[0.95rem] font-bold text-[#1c1c1e] mb-1">Сарын захиалга</p>
                 <p className="text-[0.85rem] text-[#6e6e73] leading-[1.6]">
-                  Шинжилгээ хийхийн тулд сарын захиалга сонгоно уу.
+                  1 сарын захиалга аваад тухайн сарын хязгаартай шинжилгээгээ хийлгэнэ.
+                  Шинжилгээ бүр нүүр · үс & грим · хувцас гурвыг нэгэн зэрэг хамарна.
                 </p>
-                {profile?.subscription && (
-                  <p className="text-[0.78rem] text-[#9333ea] mt-1 font-semibold">
-                    Одоогийн: {profile.subscription.monthlyUsage}/{profile.subscription.usageLimit} ашиглалт · {profile.subscription.plan.toUpperCase()}
-                  </p>
-                )}
               </div>
+              {profile?.subscription && (
+                <div className="shrink-0 text-right">
+                  <p className="text-[0.72rem] font-bold text-[#9333ea] uppercase tracking-[0.06em]">{profile.subscription.plan.toUpperCase()} захиалга</p>
+                  <p className="text-[0.82rem] text-[#6e6e73] mt-0.5">{profile.subscription.monthlyUsage}/{profile.subscription.usageLimit} ашигласан</p>
+                </div>
+              )}
             </div>
 
+            {/* Plan cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {PLAN_META.map((plan) => (
                 <button key={plan.id} onClick={() => setSelectedPlan(plan.id)}
-                  className="p-6 rounded-[22px] text-left transition-all relative overflow-hidden"
+                  className="p-6 rounded-[22px] text-left transition-all relative overflow-hidden cursor-pointer"
                   style={{
                     background:  selectedPlan === plan.id ? (plan.highlight ? "#1c1c1e" : `${plan.color}08`) : "#fff",
                     border:      `2px solid ${selectedPlan === plan.id ? plan.color : "rgba(0,0,0,0.08)"}`,
                     boxShadow:   selectedPlan === plan.id ? `0 8px 32px ${plan.color}25` : "0 2px 12px rgba(0,0,0,0.05)",
                   }}>
-                  {plan.highlight && <div className="absolute top-0 left-0 right-0 h-[3px]"
-                    style={{ background: "linear-gradient(90deg,#9333ea,#c084fc,#7c3aed)" }} />}
+                  {plan.highlight && (
+                    <div className="absolute top-0 left-0 right-0 h-[3px]"
+                      style={{ background: "linear-gradient(90deg,#9333ea,#c084fc,#7c3aed)" }} />
+                  )}
+
                   <div className="flex justify-between items-start mb-4">
                     <p className="text-[0.72rem] font-bold tracking-[0.08em] uppercase"
                       style={{ color: plan.highlight && selectedPlan === plan.id ? "rgba(255,255,255,0.45)" : "#8e8e93" }}>
                       {plan.name}
                     </p>
-                    {plan.highlight && <span className="text-[0.6rem] font-bold text-[#c084fc] bg-[rgba(192,132,252,0.15)] border border-[rgba(192,132,252,0.3)] rounded-full px-2 py-0.5">Алдартай</span>}
+                    {plan.highlight && (
+                      <span className="text-[0.6rem] font-bold text-[#c084fc] bg-[rgba(192,132,252,0.15)] border border-[rgba(192,132,252,0.3)] rounded-full px-2 py-0.5">
+                        Алдартай
+                      </span>
+                    )}
                   </div>
+
                   <p className="text-[2rem] font-extrabold leading-none mb-1"
                     style={{ color: plan.highlight && selectedPlan === plan.id ? "#fff" : "#1c1c1e" }}>
                     ₮{(plan.id === "basic" ? prices.basic : prices.pro).toLocaleString()}
@@ -283,6 +257,7 @@ export default function AnalyzePage() {
                     style={{ color: plan.highlight && selectedPlan === plan.id ? "rgba(255,255,255,0.4)" : "#8e8e93" }}>
                     / сар · {plan.limit} шинжилгээ
                   </p>
+
                   <ul className="space-y-2">
                     {plan.features.map((f) => (
                       <li key={f} className="flex gap-2 text-[0.82rem]"
@@ -295,36 +270,43 @@ export default function AnalyzePage() {
               ))}
             </div>
 
-            {error && <p className="text-[0.8rem] text-[#ef4444] bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.15)] rounded-xl px-4 py-[10px]">{error}</p>}
+            {error && (
+              <p className="text-[0.8rem] text-[#ef4444] bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.15)] rounded-xl px-4 py-[10px]">{error}</p>
+            )}
 
-            <div className="flex gap-3">
-              <button onClick={() => setStep("occasion")}
-                className="flex-1 py-[14px] bg-transparent border border-[rgba(0,0,0,0.1)] rounded-full font-semibold text-[0.9rem] text-[#6e6e73] cursor-pointer">
-                ← Буцах
-              </button>
-              <button onClick={handleSubscribe} disabled={!selectedPlan}
-                className="flex-[2] py-[14px] border-none rounded-full font-bold text-[0.9rem]"
-                style={{
-                  background: selectedPlan ? "linear-gradient(135deg,#9333ea,#7c3aed)" : "rgba(0,0,0,0.06)",
-                  color:      selectedPlan ? "#fff" : "#aeaeb2",
-                  cursor:     selectedPlan ? "pointer" : "not-allowed",
-                  boxShadow:  selectedPlan ? "0 4px 20px rgba(147,51,234,0.4)" : "none",
-                }}>
-                {selectedPlan ? `${selectedPlan === "pro" ? "Pro" : "Basic"} захиалах →` : "Багц сонгоно уу"}
-              </button>
-            </div>
+            <button onClick={handleSubscribe} disabled={!selectedPlan}
+              className="w-full py-[16px] border-none rounded-full font-bold text-[1rem]"
+              style={{
+                background: selectedPlan ? "linear-gradient(135deg,#9333ea,#7c3aed)" : "rgba(0,0,0,0.06)",
+                color:      selectedPlan ? "#fff" : "#aeaeb2",
+                cursor:     selectedPlan ? "pointer" : "not-allowed",
+                boxShadow:  selectedPlan ? "0 4px 24px rgba(147,51,234,0.4)" : "none",
+              }}>
+              {notLoggedIn
+                ? "Нэвтэрч захиалах →"
+                : selectedPlan
+                  ? `${selectedPlan === "pro" ? "Pro" : "Basic"} захиалах — ₮${(selectedPlan === "basic" ? prices.basic : prices.pro).toLocaleString()} →`
+                  : "Багц сонгоно уу"}
+            </button>
+
+            <p className="text-center text-[0.78rem] text-[#aeaeb2]">
+              Нэвтэрч орсны дараа · QPay-ээр төлнө · Дурдсан үед цуцлах боломжтой
+            </p>
           </div>
         )}
 
-        {/* ── Payment ── */}
+        {/* ── PAYMENT — QPay ── */}
         {step === "payment" && invoice && (
           <div className="max-w-[420px] mx-auto">
             <div className="card p-8 text-center">
               <p className="label-style mb-[10px]">QPay захиалгын төлбөр</p>
-              <p className="text-[2.2rem] font-extrabold text-[#1c1c1e] mb-1 tracking-[-0.02em]">{invoice.amount.toLocaleString()}₮</p>
-              <p className="text-[0.85rem] text-[#8e8e93] mb-6">
-                {selectedPlan === "pro" ? "Pro захиалга · сард 40 шинжилгээ" : "Basic захиалга · сард 20 шинжилгээ"}
+              <p className="text-[2.2rem] font-extrabold text-[#1c1c1e] mb-1 tracking-[-0.02em]">
+                {invoice.amount.toLocaleString()}₮
               </p>
+              <p className="text-[0.85rem] text-[#8e8e93] mb-6">
+                {selectedPlan === "pro" ? "Pro · сард 40 шинжилгээ + AI Стилист" : "Basic · сард 20 шинжилгээ"}
+              </p>
+
               {invoice.qrImage && (
                 <div className="flex justify-center mb-6">
                   <div className="bg-white p-[14px] rounded-[20px] border border-[rgba(0,0,0,0.07)] shadow-[0_4px_16px_rgba(0,0,0,0.08)]">
@@ -333,12 +315,14 @@ export default function AnalyzePage() {
                   </div>
                 </div>
               )}
+
               <div className="flex items-center gap-2 justify-center mb-5">
                 {[0,1,2].map((i) => (
                   <span key={i} className="animate-dot-blink w-[6px] h-[6px] rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.2}s` }} />
                 ))}
                 <span className="text-[0.82rem] text-[#8e8e93]">Төлбөр хүлээж байна...</span>
               </div>
+
               {invoice.urls && invoice.urls.length > 0 && (
                 <div className="grid grid-cols-2 gap-2">
                   {invoice.urls.map((u: QPayUrl) => (
@@ -358,7 +342,71 @@ export default function AnalyzePage() {
           </div>
         )}
 
-        {/* ── Analyzing ── */}
+        {/* ── UPLOAD ── */}
+        {step === "upload" && (
+          <div
+            className="rounded-[24px] min-h-[380px] cursor-pointer border-2 border-dashed border-[rgba(147,51,234,0.25)] bg-[rgba(147,51,234,0.02)] flex flex-col items-center justify-center gap-6 p-12 transition-all"
+            onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.type.startsWith("image/")) handleFile(f); }}
+            onDragOver={(e) => e.preventDefault()}
+            onClick={() => inputRef.current?.click()}
+          >
+            <input ref={inputRef} type="file" accept="image/*" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+            <div className="w-[88px] h-[88px] rounded-full flex items-center justify-center bg-[rgba(147,51,234,0.1)] border-2 border-[rgba(147,51,234,0.2)]">
+              <span className="text-[2.2rem]">📸</span>
+            </div>
+            <div className="text-center">
+              <p className="text-[1.15rem] font-bold text-[#1c1c1e] mb-2">Selfie оруулна уу</p>
+              <p className="text-[0.88rem] text-[#8e8e93]">JPG · PNG · WEBP · Урд тал харсан зураг хамгийн сайн</p>
+            </div>
+          </div>
+        )}
+
+        {/* ── OCCASION ── */}
+        {step === "occasion" && (
+          <div className="flex flex-col gap-5">
+            {preview && (
+              <div className="card flex items-center gap-4 p-4">
+                <Image src={preview} alt="preview" width={56} height={56} className="object-cover rounded-xl border border-[rgba(0,0,0,0.08)]" />
+                <div className="flex-1">
+                  <p className="text-[0.9rem] font-bold text-[#1c1c1e]">Зураг бэлэн</p>
+                  <p className="text-[0.78rem] text-[#8e8e93]">Нөхцлөө сонгоод шинжлэх товчийг дарна уу</p>
+                </div>
+                <button onClick={() => setStep("upload")} className="text-[0.75rem] text-[#aeaeb2] bg-transparent border-none cursor-pointer">Солих</button>
+              </div>
+            )}
+
+            <p className="label-style">Ямар нөхцөлд зориулж байна вэ?</p>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {OCCASIONS.map((o) => (
+                <button key={o.id} onClick={() => setOccasion(o.id)}
+                  className="p-[18px_14px] rounded-[16px] text-center cursor-pointer transition-all border-[1.5px]"
+                  style={{
+                    background:  occasion === o.id ? "rgba(147,51,234,0.07)" : "#fff",
+                    borderColor: occasion === o.id ? "rgba(147,51,234,0.35)" : "rgba(0,0,0,0.08)",
+                    boxShadow:   occasion === o.id ? "0 4px 16px rgba(147,51,234,0.12)" : "0 1px 4px rgba(0,0,0,0.04)",
+                  }}>
+                  <p className="text-[1.5rem] mb-2">{o.icon}</p>
+                  <p className="text-[0.82rem] font-bold text-[#1c1c1e] mb-[2px]">{o.label}</p>
+                  <p className="text-[0.7rem] text-[#8e8e93]">{o.sub}</p>
+                </button>
+              ))}
+            </div>
+
+            {error && (
+              <p className="text-[0.8rem] text-[#ef4444] bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.15)] rounded-xl px-4 py-[10px]">{error}</p>
+            )}
+
+            <button onClick={runAll}
+              className="w-full py-[14px] border-none rounded-full font-bold text-[0.9rem] text-white cursor-pointer"
+              style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)", boxShadow: "0 4px 20px rgba(147,51,234,0.35)" }}>
+              Шинжлэх ✦
+            </button>
+          </div>
+        )}
+
+        {/* ── ANALYZING ── */}
         {step === "analyzing" && (
           <div className="card p-16 text-center max-w-[480px] mx-auto">
             <div className="flex gap-3 justify-center mb-6">
@@ -367,19 +415,19 @@ export default function AnalyzePage() {
               ))}
             </div>
             <p className="text-[1.1rem] font-bold text-[#1c1c1e] mb-3">AI гурван чиглэлд нэгэн зэрэг шинжилж байна</p>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               {[
                 { label: "Нүүрний хэлбэр · Арьсны тон · Style type", color: "#9333ea" },
                 { label: "Үс засал · Нүүр будалт · Өнгөний палет",  color: "#a855f7" },
                 { label: "Хувцас хослол · Стилийн зөвлөмж",         color: "#7c3aed" },
-              ].map((l, i) => (
-                <p key={i} className="label-style text-center" style={{ color: l.color }}>{l.label}</p>
+              ].map((l) => (
+                <p key={l.label} className="label-style text-center" style={{ color: l.color }}>{l.label}</p>
               ))}
             </div>
           </div>
         )}
 
-        {/* ── Result ── */}
+        {/* ── RESULT ── */}
         {step === "result" && result && (
           <div className="anim-fade-up flex flex-col gap-5">
 
@@ -402,7 +450,7 @@ export default function AnalyzePage() {
               ))}
             </div>
 
-            {/* ─ Face tab ─ */}
+            {/* Face */}
             {activeTab === "face" && (
               <div className="flex flex-col gap-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -417,7 +465,6 @@ export default function AnalyzePage() {
                     </div>
                   ))}
                 </div>
-
                 <div className="card p-[22px]">
                   <p className="label-style mb-[14px]">Өнгөний палет</p>
                   <div className="flex gap-3 flex-wrap">
@@ -429,7 +476,6 @@ export default function AnalyzePage() {
                     ))}
                   </div>
                 </div>
-
                 <div className="card p-[22px]">
                   <p className="label-style mb-[14px]">AI зөвлөмж</p>
                   <ul className="flex flex-col gap-3 list-none p-0">
@@ -443,7 +489,7 @@ export default function AnalyzePage() {
               </div>
             )}
 
-            {/* ─ Hair tab ─ */}
+            {/* Hair */}
             {activeTab === "hair" && (
               <div className="flex flex-col gap-4">
                 <div className="card flex items-center gap-4 p-[18px]">
@@ -455,9 +501,8 @@ export default function AnalyzePage() {
                     <p className="text-base font-bold text-[#1c1c1e] mt-1">{result.hair.faceShape} нүүр</p>
                   </div>
                 </div>
-
                 <div className="flex gap-2">
-                  {(["hair", "makeup"] as const).map((t) => (
+                  {(["hair","makeup"] as const).map((t) => (
                     <button key={t} onClick={() => setHairTab(t)}
                       className="text-[0.87rem] font-semibold px-5 py-[9px] rounded-full border cursor-pointer transition-all"
                       style={{
@@ -469,7 +514,6 @@ export default function AnalyzePage() {
                     </button>
                   ))}
                 </div>
-
                 {hairTab === "hair" && result.hair.hair.map((h) => (
                   <div key={h.name} className="card p-[18px]">
                     <div className="flex items-start justify-between mb-[10px]">
@@ -479,7 +523,6 @@ export default function AnalyzePage() {
                     <p className="text-[0.87rem] text-[#6e6e73] leading-[1.65]">{h.desc}</p>
                   </div>
                 ))}
-
                 {hairTab === "makeup" && result.hair.makeup.map((m) => (
                   <div key={m.name} className="card p-[18px]">
                     <div className="flex items-center justify-between mb-[10px]">
@@ -494,7 +537,7 @@ export default function AnalyzePage() {
               </div>
             )}
 
-            {/* ─ Outfit tab ─ */}
+            {/* Outfit */}
             {activeTab === "outfit" && (
               <div className="flex flex-col gap-4">
                 {result.outfits.map((outfit, i) => (
@@ -527,11 +570,11 @@ export default function AnalyzePage() {
 
             {/* Actions */}
             <div className="flex gap-3 flex-wrap">
-              <button onClick={() => { setResult(null); setStep("occasion"); }}
+              <button onClick={() => setStep("occasion")}
                 className="flex-1 min-w-[140px] py-[13px] bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] rounded-full font-bold text-[0.87rem] text-[#9333ea] cursor-pointer">
                 Дахин шинжлэх
               </button>
-              <button onClick={reset}
+              <button onClick={resetToUpload}
                 className="flex-1 min-w-[140px] py-[13px] bg-transparent border border-[rgba(0,0,0,0.1)] rounded-full font-semibold text-[0.87rem] text-[#6e6e73] cursor-pointer">
                 Шинэ зураг
               </button>

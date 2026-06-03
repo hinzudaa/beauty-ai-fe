@@ -101,7 +101,7 @@ function PricingCard({ name, price, tag, features, cta, href, highlight = false,
 
       <Link
         href={href}
-        className="block text-center rounded-full py-[14px] font-bold text-[0.9rem] transition-all duration-200"
+        className="block text-center rounded-full py-[14px] font-bold text-[0.9rem] transition-all duration-200 mt-auto"
         style={{
           background: highlight ? "linear-gradient(135deg,#9333ea,#7c3aed)" : "transparent",
           color: highlight ? "#fff" : "#1c1c1e",
@@ -317,27 +317,25 @@ export default async function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-[18px] max-w-[820px] mx-auto">
             <PricingCard
-              name="Basic" price={basicPrice.toLocaleString()} tag="/ сар" href="/login" cta="Basic эхлэх →" animDelay="100ms"
+              name="Basic" price={basicPrice.toLocaleString()} tag="/ сар"
+              href="/analyze?plan=basic" cta="Basic захиалах →" animDelay="100ms"
               features={[
-                "Сард 20 зураг upload",
+                "Сард 20 шинжилгээ",
+                "Нүүр · Үс & Грим · Хувцас — нэг дор",
                 "Бүрэн AI нүүрний шинжилгээ",
-                "AI-generated look зурагнууд",
-                "Үс засал, нүүр будалт хувилбарууд",
-                "Хувцаслалтын зөвлөмж",
-                "Before/After харьцуулалт",
-                "Look татаж авах, хадгалах",
+                "Үс засал & грим зөвлөмж",
+                "Хувцас хослол санал болгох",
+                "Өнгөний палет & персональ зөвлөмж",
               ]}
             />
             <PricingCard
-              name="Pro" price={proPrice.toLocaleString()} tag="/ сар" href="/login" cta="Pro эхлэх →" highlight animDelay="200ms"
+              name="Pro" price={proPrice.toLocaleString()} tag="/ сар"
+              href="/analyze?plan=pro" cta="Pro захиалах →" highlight animDelay="200ms"
               features={[
-                "Сард 40 зураг upload",
+                "Сард 40 шинжилгээ",
                 "AI Personal Stylist Chat",
-                "Бүтээгдэхүүний линк & зөвлөмж",
-                "Real-time look санал болгох",
                 "Бүх Basic боломжууд",
                 "Хамгийн өндөр нарийвчлал",
-                "Хязгааргүй look хадгалах",
               ]}
             />
           </div>
