@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { analyzeImage, fileToDataUrl, AnalyzeResult } from "@/apis/analyze";
 import { createInvoice, checkPayment, InvoiceResponse, QPayUrl } from "@/apis/payment";
 import { tokenStore } from "@/utils/request";
@@ -49,6 +49,20 @@ export default function AnalyzePage() {
     }
   }
 
+  const runAnalysis = useCallback(async () => {
+    if (!dataUrl) return;
+    setStep("analyzing");
+    setError(null);
+    try {
+      const res = await analyzeImage(dataUrl);
+      setResult(res);
+      setStep("result");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Шинжилгээ хийхэд алдаа гарлаа");
+      setStep("upload");
+    }
+  }, [dataUrl]);
+
   useEffect(() => {
     if (step !== "payment" || !invoice) return;
     let cancelled = false;
@@ -67,21 +81,7 @@ export default function AnalyzePage() {
 
     let timer: ReturnType<typeof setTimeout> = setTimeout(poll, 3_000);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [step, invoice]);
-
-  async function runAnalysis() {
-    if (!dataUrl) return;
-    setStep("analyzing");
-    setError(null);
-    try {
-      const res = await analyzeImage(dataUrl);
-      setResult(res);
-      setStep("result");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Шинжилгээ хийхэд алдаа гарлаа");
-      setStep("upload");
-    }
-  }
+  }, [step, invoice, runAnalysis]);
 
   function reset() {
     setStep("upload");
@@ -236,6 +236,7 @@ export default function AnalyzePage() {
               {invoice.qrImage && (
                 <div className="flex justify-center mb-5">
                   <div className="bg-white p-3 rounded-2xl inline-block">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={`data:image/png;base64,${invoice.qrImage}`}
                       alt="QPay QR"
@@ -264,6 +265,7 @@ export default function AnalyzePage() {
                         className="flex items-center gap-2 p-2.5 rounded-[14px] bg-white/[0.04] border border-white/[0.07] hover:bg-white/[0.08] transition-all text-left"
                         target="_blank" rel="noopener noreferrer">
                         {u.logo ? (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img src={u.logo} alt={u.name} width={28} height={28} className="rounded-lg shrink-0 object-contain" />
                         ) : (
                           <div className="w-7 h-7 rounded-lg bg-white/[0.08] shrink-0" />
