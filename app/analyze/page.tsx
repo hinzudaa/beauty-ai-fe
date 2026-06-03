@@ -1,8 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { analyzeImage, fileToDataUrl, AnalyzeResult } from "@/apis/analyze";
+import { createInvoice, checkPayment, InvoiceResponse, QPayUrl } from "@/apis/payment";
 import { tokenStore } from "@/utils/request";
 
 const BADGE = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.06] border border-white/[0.1] text-white/60 text-[0.68rem] tracking-[0.14em] uppercase font-medium font-sans";
@@ -15,46 +16,78 @@ const FEATURES = [
   { icon: "✦", label: "Style type",       desc: "Таны гоо сайхны хувийн дүр төрхийг олно" },
 ];
 
+type Step = "upload" | "payment" | "analyzing" | "result";
+
 export default function AnalyzePage() {
+  const [step, setStep]         = useState<Step>("upload");
   const [preview, setPreview]   = useState<string | null>(null);
   const [dataUrl, setDataUrl]   = useState<string | null>(null);
-  const [loading, setLoading]   = useState(false);
+  const [invoice, setInvoice]   = useState<InvoiceResponse | null>(null);
   const [error, setError]       = useState<string | null>(null);
   const [result, setResult]     = useState<AnalyzeResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File) {
     setPreview(URL.createObjectURL(file));
+    setDataUrl(await fileToDataUrl(file));
+    setStep("upload");
     setResult(null);
     setError(null);
-    const url = await fileToDataUrl(file);
-    setDataUrl(url);
+    setInvoice(null);
   }
 
-  async function analyze() {
+  async function handleStart() {
     if (!dataUrl) return;
+    if (!tokenStore.get()) { setError("Эхлээд нэвтэрнэ үү"); return; }
+    setError(null);
+    try {
+      const inv = await createInvoice();
+      setInvoice(inv);
+      setStep("payment");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Алдаа гарлаа");
+    }
+  }
 
-    const token = tokenStore.get();
-    if (!token) {
-      setError("Эхлээд нэвтэрнэ үү");
-      return;
+  useEffect(() => {
+    if (step !== "payment" || !invoice) return;
+    let cancelled = false;
+
+    async function poll() {
+      if (cancelled || !invoice) return;
+      try {
+        const status = await checkPayment(invoice.invoiceId);
+        if (status.paid) {
+          if (!cancelled) runAnalysis();
+          return;
+        }
+      } catch { /* keep polling */ }
+      if (!cancelled) timer = setTimeout(poll, 3_000);
     }
 
-    setLoading(true);
+    let timer: ReturnType<typeof setTimeout> = setTimeout(poll, 3_000);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [step, invoice]);
+
+  async function runAnalysis() {
+    if (!dataUrl) return;
+    setStep("analyzing");
     setError(null);
     try {
       const res = await analyzeImage(dataUrl);
       setResult(res);
+      setStep("result");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Шинжилгээ хийхэд алдаа гарлаа");
-    } finally {
-      setLoading(false);
+      setStep("upload");
     }
   }
 
   function reset() {
+    setStep("upload");
     setPreview(null);
     setDataUrl(null);
+    setInvoice(null);
     setResult(null);
     setError(null);
   }
@@ -84,17 +117,20 @@ export default function AnalyzePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
 
+        {/* ── LEFT: upload zone ── */}
         <div className="space-y-4">
           <div
-            className={`rounded-[24px] cursor-pointer transition-all overflow-hidden ${
+            className={`rounded-[24px] transition-all overflow-hidden ${
+              step === "payment" ? "cursor-default" : "cursor-pointer"
+            } ${
               preview
                 ? "border border-white/[0.14] bg-white/[0.04]"
                 : "border border-dashed border-white/[0.1] bg-white/[0.02] hover:border-white/[0.2] hover:bg-white/[0.04]"
             }`}
             style={{ minHeight: "22rem" }}
-            onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.type.startsWith("image/")) handleFile(f); }}
+            onDrop={(e) => { e.preventDefault(); if (step === "payment") return; const f = e.dataTransfer.files[0]; if (f?.type.startsWith("image/")) handleFile(f); }}
             onDragOver={(e) => e.preventDefault()}
-            onClick={() => inputRef.current?.click()}
+            onClick={() => { if (step !== "payment") inputRef.current?.click(); }}
           >
             <input ref={inputRef} type="file" accept="image/*" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
@@ -108,7 +144,9 @@ export default function AnalyzePage() {
                     <span className="text-black text-xs font-bold">✦</span>
                   </div>
                 </div>
-                <p className="text-sm text-white/30 font-sans" style={{ letterSpacing: "0.06em" }}>Дахин дарж зураг солих</p>
+                {step === "upload" && (
+                  <p className="text-sm text-white/30 font-sans" style={{ letterSpacing: "0.06em" }}>Дахин дарж зураг солих</p>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center gap-5 p-14" style={{ minHeight: "22rem" }}>
@@ -126,21 +164,15 @@ export default function AnalyzePage() {
             )}
           </div>
 
-          {preview && !loading && !result && (
-            <button onClick={analyze}
+          {step === "upload" && preview && (
+            <button onClick={handleStart}
               className="w-full bg-white text-black rounded-full font-semibold py-3.5 hover:scale-[1.02] hover:opacity-90 transition-all shadow-[0_0_40px_rgba(255,255,255,0.15)] font-sans text-sm"
               style={{ letterSpacing: "0.1em" }}>
-              AI-аар шинжлэх →
+              Эхлэх →
             </button>
           )}
 
-          {error && !loading && (
-            <p className="text-xs text-red-400 font-sans py-2.5 px-4 rounded-xl bg-red-500/[0.08] border border-red-500/[0.15] text-center">
-              {error}
-            </p>
-          )}
-
-          {loading && (
+          {step === "analyzing" && (
             <div className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] p-10 text-center`}>
               <div className="flex gap-2.5 justify-center mb-5">
                 {[0, 1, 2].map((i) => (
@@ -148,26 +180,34 @@ export default function AnalyzePage() {
                     style={{ animationDelay: `${i * 0.18}s` }} />
                 ))}
               </div>
-              <p className="text-base text-white/70 font-sans mb-2">Шинжилж байна</p>
+              <p className="text-base text-white/70 font-sans mb-2">AI шинжилж байна</p>
               <p className="text-xs text-white/30 font-sans" style={{ letterSpacing: "0.1em" }}>НҮҮРНИЙ ХЭЛБЭР · АРЬСНЫ ТОН · STYLE TYPE</p>
             </div>
           )}
 
-          {result && (
+          {step === "result" && (
             <button onClick={reset}
               className="w-full py-3.5 bg-white/[0.06] text-white/60 border border-white/[0.08] rounded-full hover:text-white hover:border-white/[0.18] transition-all font-sans text-sm"
               style={{ letterSpacing: "0.08em" }}>
               Дахин шинжлэх
             </button>
           )}
+
+          {error && (
+            <p className="text-xs text-red-400 font-sans py-2.5 px-4 rounded-xl bg-red-500/[0.08] border border-red-500/[0.15] text-center">
+              {error}
+            </p>
+          )}
         </div>
 
-        {!result && !loading && (
+        {/* ── RIGHT ── */}
+
+        {/* Info panel */}
+        {step === "upload" && !result && (
           <div className="space-y-4 lg:pt-2">
             <p className={`${LABEL} mb-5`}>Юу тодорхойлогдох вэ</p>
             {FEATURES.map((f) => (
-              <div key={f.label}
-                className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] flex gap-5 p-5 hover:bg-white/[0.07] hover:border-white/[0.14] transition-all`}>
+              <div key={f.label} className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] flex gap-5 p-5 hover:bg-white/[0.07] hover:border-white/[0.14] transition-all`}>
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white/[0.06] border border-white/[0.1] shrink-0">
                   <span className="text-white/60 text-sm">{f.icon}</span>
                 </div>
@@ -178,14 +218,74 @@ export default function AnalyzePage() {
               </div>
             ))}
             <div className={`${CARD} mt-6 p-5`}>
-              <p className="text-xs text-white/30 font-sans" style={{ lineHeight: 1.7, letterSpacing: "0.02em" }}>
-                Зургаа upload хийхэд таны нүүрний хэлбэр, арьсны тон, style type-ийг AI шинжилж хувийн зөвлөмж гаргана.
+              <p className="text-xs text-white/30 font-sans" style={{ lineHeight: 1.7 }}>
+                Зургаа upload хийгээд <span className="text-white/60">Эхлэх</span> дарснаар QPay төлбөр хийнэ. Амжилттай төлсний дараа AI шинжилнэ.
               </p>
             </div>
           </div>
         )}
 
-        {result && (
+        {/* QPay payment panel */}
+        {step === "payment" && invoice && (
+          <div className="space-y-4 lg:pt-2 animate-fade-up">
+            <div className={`${CARD} shadow-[0_0_40px_rgba(168,100,255,0.06)] p-6 text-center`}>
+              <p className={`${LABEL} mb-3`}>QPay төлбөр</p>
+              <p className="text-2xl font-kenoky text-white mb-1">{invoice.amount.toLocaleString()}₮</p>
+              <p className="text-xs text-white/30 font-sans mb-5">Beauty AI · Нүүрний шинжилгээ</p>
+
+              {invoice.qrImage && (
+                <div className="flex justify-center mb-5">
+                  <div className="bg-white p-3 rounded-2xl inline-block">
+                    <img
+                      src={`data:image/png;base64,${invoice.qrImage}`}
+                      alt="QPay QR"
+                      width={200}
+                      height={200}
+                      className="rounded-xl block"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 justify-center mb-5">
+                {[0, 1, 2].map((i) => (
+                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-gold animate-dot-blink inline-block"
+                    style={{ animationDelay: `${i * 0.2}s` }} />
+                ))}
+                <span className="text-xs text-white/35 font-sans">Төлбөр хүлээж байна...</span>
+              </div>
+
+              {invoice.urls && invoice.urls.length > 0 && (
+                <div>
+                  <p className={`${LABEL} mb-3`}>Банкны апп-аар төлөх</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {invoice.urls.map((u: QPayUrl) => (
+                      <a key={u.name} href={u.link}
+                        className="flex items-center gap-2 p-2.5 rounded-[14px] bg-white/[0.04] border border-white/[0.07] hover:bg-white/[0.08] transition-all text-left"
+                        target="_blank" rel="noopener noreferrer">
+                        {u.logo ? (
+                          <img src={u.logo} alt={u.name} width={28} height={28} className="rounded-lg shrink-0 object-contain" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-lg bg-white/[0.08] shrink-0" />
+                        )}
+                        <span className="text-xs text-white/60 font-sans truncate">{u.name}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button onClick={reset}
+              className="w-full py-3 text-sm text-white/30 font-sans border border-white/[0.06] rounded-full hover:text-white/50 transition-all"
+              style={{ letterSpacing: "0.05em" }}>
+              ← Буцах
+            </button>
+          </div>
+        )}
+
+        {/* Result */}
+        {step === "result" && result && (
           <div className="space-y-4 animate-fade-up lg:pt-2">
             <div className="grid grid-cols-3 gap-3">
               {[
