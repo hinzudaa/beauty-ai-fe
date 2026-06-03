@@ -1,5 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { siteUrl } from "@/config/site";
+import { tokenStore, ApiError } from "@/utils/request";
 
 type Message = { role: "user" | "ai"; text: string };
 
@@ -11,22 +13,23 @@ const QUICK = [
   "Намрын шинэ wardrobe-д юу оруулах вэ?",
 ];
 
-const AI: Record<string, string> = {
-  interview: `**Ажлын ярилцлагад** — Structured blazer + tailored trousers хамгийн найдвартай хослол.\n\n**Өнгө:** Navy, charcoal, camel — итгэл төрүүлдэг tone.\n\n**Shoes:** Block heel эсвэл loafer — comfortable байх нь чухал.\n\n**Avoid:** Casual sneaker, маш тод өнгө, хэт богино hem.`,
-  date:      `**Date night** —\n\nSilk slip dress (dusty rose/black) + strappy sandals — Effortless Chic.\n\nFitted leather jacket + flowy midi skirt + ankle boots — Edgy Feminine.\n\n**Зөвлөмж:** Нэг "wow" piece сонго — хувцас эсвэл accessory, хоёулааг нэгэн зэрэг биш.`,
-  casual:    `**Офис casual өнгөний гид** —\n\n✓ White + camel → цэвэрхэн, professional\n✓ Navy + cream → classic, polished\n✓ Olive + rust → warm, autumn-ready\n\n**Гол зарчим:** 2-оос илүү өнгө хольж болохгүй.`,
-  kpop:      `**K-pop → Монгол хувилбар** —\n\nOversized hoodie + high-waist jeans → accessible, on-trend.\nMonochrome set → top + bottom ижил өнгө → simple ба modern.\nPlatform sneaker, chunky boot → statement footwear.\n\nМанайд 4 улирал тул layering чухал — функциональ байлга.`,
-  wardrobe:  `**Намрын capsule wardrobe** —\n\n1. Camel trench coat\n2. White button-up shirt\n3. Dark wash straight jeans\n4. Chunky knit sweater (oatmeal)\n5. Black turtleneck\n6. Tailored trousers (charcoal)\n7. Leather ankle boots\n8. White sneakers\n9. Structured tote bag\n10. Denim jacket\n\nPalette: camel + white + black + rust + olive — бүгд хоорондоо mix хийгдэнэ.`,
-};
+async function fetchChatReply(
+  message: string,
+  history: Array<{ role: "user" | "assistant"; content: string }>
+): Promise<string> {
+  const token = tokenStore.get();
+  const res = await fetch(`${siteUrl}/chat/message`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ message, history }),
+  });
 
-function getResponse(text: string) {
-  const l = text.toLowerCase();
-  if (l.includes("interview") || l.includes("ярилцлага")) return AI.interview;
-  if (l.includes("date") || l.includes("night")) return AI.date;
-  if (l.includes("casual") || l.includes("офис") || l.includes("өнгө")) return AI.casual;
-  if (l.includes("k-pop") || l.includes("kpop") || l.includes("монгол болг")) return AI.kpop;
-  if (l.includes("wardrobe") || l.includes("намар") || l.includes("шинэ")) return AI.wardrobe;
-  return `**"${text}"** гэсэн асуултын хувьд —\n\nЕрөнхий зарчим: **fit → color → style** дарааллаар ажиллах.\n\nДэлгэрэнгүй зөвлөгөө авахын тулд event, body type, budget-ийг нэмж хэлнэ үү.`;
+  const json = await res.json();
+  if (!res.ok) throw new ApiError(res.status, json?.error ?? "Request failed");
+  return json.reply as string;
 }
 
 function renderText(text: string) {
@@ -40,21 +43,57 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     { role: "ai", text: "Сайн байна уу. Би таны хувийн AI стилист. Хувцас, үс засал, грим — ямар ч асуулт асуугаарай." },
   ]);
-  const [input, setInput] = useState("");
+  const [input, setInput]   = useState("");
   const [loading, setLoading] = useState(false);
+  const [proError, setProError] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
 
-  function send(text: string) {
+  // Convert message history to the format the backend expects
+  function buildHistory() {
+    return messages.slice(-10).map((m) => ({
+      role: m.role === "ai" ? "assistant" as const : "user" as const,
+      content: m.text,
+    }));
+  }
+
+  async function send(text: string) {
     if (!text.trim() || loading) return;
+
+    if (!tokenStore.get()) {
+      setMessages((m) => [...m, {
+        role: "ai",
+        text: "Энэ боломжийг ашиглахын тулд эхлээд нэвтэрнэ үү.",
+      }]);
+      return;
+    }
+
     setMessages((m) => [...m, { role: "user", text }]);
     setInput("");
     setLoading(true);
-    setTimeout(() => {
-      setMessages((m) => [...m, { role: "ai", text: getResponse(text) }]);
+
+    try {
+      const history = buildHistory();
+      const reply   = await fetchChatReply(text, history);
+      setMessages((m) => [...m, { role: "ai", text: reply }]);
+    } catch (err) {
+      const isProErr = err instanceof ApiError && (err.status === 402 || err.message === "proRequired");
+      if (isProErr) {
+        setProError(true);
+        setMessages((m) => [...m, {
+          role: "ai",
+          text: "AI Стилист чат нь **Pro захиалгад** зориулагдсан. Профайл хуудаснаас Pro захиалга авна уу.",
+        }]);
+      } else {
+        setMessages((m) => [...m, {
+          role: "ai",
+          text: "Уучлаарай, хариу боловсруулахад алдаа гарлаа. Дахин оролдоно уу.",
+        }]);
+      }
+    } finally {
       setLoading(false);
-    }, 1400);
+    }
   }
 
   return (
@@ -65,13 +104,13 @@ export default function ChatPage() {
         <div className="flex items-end justify-between mb-5">
           <div>
             <span className="label-style inline-flex items-center gap-[6px] px-[13px] py-[5px] rounded-full bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] text-[#9333ea] mb-4">
-              ✦ &nbsp;04 · Premium
+              ✦ &nbsp;04 · Pro захиалга
             </span>
             <h1 className="text-[clamp(2.2rem,5vw,3.5rem)] tracking-[-0.03em] leading-[1.06] text-[#1c1c1e]">
-              <span
-                className="bg-clip-text text-transparent"
-                style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}
-              >AI</span> Стилист
+              <span className="bg-clip-text text-transparent"
+                style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                AI
+              </span> Стилист
             </h1>
           </div>
           <div className="hidden md:flex flex-col items-end gap-1">
@@ -79,17 +118,23 @@ export default function ChatPage() {
             <p className="label-style">Онлайн зөвлөмж</p>
           </div>
         </div>
+
+        {/* Pro upgrade banner */}
+        {proError && (
+          <div className="mb-3 px-4 py-3 rounded-[14px] bg-[rgba(147,51,234,0.06)] border border-[rgba(147,51,234,0.2)] flex items-center justify-between gap-3">
+            <p className="text-[0.82rem] text-[#6e6e73]">Энэ боломж Pro захиалгад зориулагдсан.</p>
+            <a href="/profile" className="text-[0.82rem] font-bold text-[#9333ea] shrink-0">Pro авах →</a>
+          </div>
+        )}
+
         <div className="h-px bg-[rgba(0,0,0,0.07)] mb-2" />
       </div>
 
       {/* Quick prompts */}
       <div className="flex gap-2 overflow-x-auto py-[10px] shrink-0">
         {QUICK.map((p) => (
-          <button
-            key={p}
-            onClick={() => send(p)}
-            className="text-[0.78rem] font-medium text-[#6e6e73] bg-white border border-[rgba(0,0,0,0.08)] px-4 py-2 rounded-full whitespace-nowrap shrink-0 cursor-pointer transition-all duration-150 shadow-[0_1px_4px_rgba(0,0,0,0.04)]"
-          >
+          <button key={p} onClick={() => send(p)}
+            className="text-[0.78rem] font-medium text-[#6e6e73] bg-white border border-[rgba(0,0,0,0.08)] px-4 py-2 rounded-full whitespace-nowrap shrink-0 cursor-pointer transition-all duration-150 shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
             {p}
           </button>
         ))}
@@ -104,15 +149,13 @@ export default function ChatPage() {
                 <span className="text-[#9333ea] text-[0.65rem]">✦</span>
               </div>
             )}
-            <div
-              className="max-w-[78%] px-[18px] py-[14px] text-[0.9rem] leading-[1.7] shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+            <div className="max-w-[78%] px-[18px] py-[14px] text-[0.9rem] leading-[1.7] shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
               style={{
                 borderRadius: m.role === "user" ? "20px 20px 5px 20px" : "20px 20px 20px 5px",
                 background: m.role === "user" ? "#1c1c1e" : "#fff",
                 color: m.role === "user" ? "#fff" : "#1c1c1e",
                 border: m.role === "user" ? "none" : "1px solid rgba(0,0,0,0.07)",
-              }}
-            >
+              }}>
               {m.role === "ai" ? renderText(m.text) : m.text}
             </div>
           </div>
@@ -137,24 +180,20 @@ export default function ChatPage() {
       <div className="py-3 pb-5 shrink-0 border-t border-[rgba(0,0,0,0.07)]">
         <div className="flex gap-[10px]">
           <input
-            type="text"
-            value={input}
+            type="text" value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send(input)}
             placeholder="Асуултаа бич..."
             className="flex-1 bg-white border border-[rgba(0,0,0,0.1)] rounded-[16px] px-5 py-[14px] text-[0.9rem] text-[#1c1c1e] outline-none shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
           />
-          <button
-            onClick={() => send(input)}
-            disabled={!input.trim() || loading}
+          <button onClick={() => send(input)} disabled={!input.trim() || loading}
             className="px-[22px] py-[14px] rounded-[14px] text-[0.9rem] font-bold border-none transition-all duration-150"
             style={{
               background: input.trim() ? "#1c1c1e" : "rgba(0,0,0,0.06)",
               color: input.trim() ? "#fff" : "#aeaeb2",
               cursor: input.trim() ? "pointer" : "not-allowed",
               boxShadow: input.trim() ? "0 4px 12px rgba(0,0,0,0.18)" : "none",
-            }}
-          >
+            }}>
             →
           </button>
         </div>

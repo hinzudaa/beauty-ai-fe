@@ -7,10 +7,8 @@ import { fileToDataUrl } from "@/apis/analyze";
 import { photoStore } from "@/utils/photoStore";
 
 const SERVICES = [
-  { id: "analyze",   label: "Нүүрний шинжилгээ", sub: "Face shape · Skin tone · Style type", icon: "◈", color: "#9333ea", href: "/analyze"   },
-  { id: "hairstyle", label: "Үс засал & Грим",    sub: "Hair styles · Makeup looks",          icon: "✦", color: "#a855f7", href: "/hairstyle" },
-  { id: "outfit",    label: "Хувцаслалт",          sub: "Outfit ideas · Style advice",         icon: "◉", color: "#7c3aed", href: "/outfit"    },
-  { id: "chat",      label: "AI Стилист",           sub: "Персональ зөвлөгч · Chat",           icon: "◇", color: "#6d28d9", href: "/chat"      },
+  { id: "analyze", label: "Бүрэн шинжилгээ", sub: "Нүүр · Үс & Грим · Хувцас — нэг дор", icon: "◈", color: "#9333ea", href: "/analyze" },
+  { id: "chat",    label: "AI Стилист",       sub: "Персональ зөвлөгч · Pro захиалга",     icon: "◇", color: "#6d28d9", href: "/chat"    },
 ];
 
 export default function UploadHero() {
@@ -95,7 +93,7 @@ export default function UploadHero() {
           </div>
 
           {/* Service cards */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {SERVICES.map((s) => (
               <button
                 key={s.id}

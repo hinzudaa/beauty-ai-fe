@@ -6,10 +6,8 @@ import { useSyncExternalStore } from "react";
 import { useAuth } from "@/lib/AuthContext";
 
 const links = [
-  { href: "/analyze",   label: "Шинжилгээ" },
-  { href: "/outfit",    label: "Хувцас" },
-  { href: "/hairstyle", label: "Үс / Грим" },
-  { href: "/chat",      label: "AI Стилист" },
+  { href: "/analyze", label: "Шинжилгээ" },
+  { href: "/chat",    label: "AI Стилист" },
 ];
 
 const noop = () => () => {};
