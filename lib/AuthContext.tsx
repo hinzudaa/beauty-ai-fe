@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
+import useSWR from "swr";
 import { getMe } from "@/apis";
 import { tokenStore } from "@/utils/request";
 import type { IUser } from "@/types/auth";
@@ -20,32 +21,35 @@ const AuthContext = createContext<AuthContextValue>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser]       = useState<IUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(() => tokenStore.get());
 
-  // Rehydrate session from localStorage on mount
-  useEffect(() => {
-    const token = tokenStore.get();
-    if (!token) { setLoading(false); return; }
+  const { data: user, isLoading, mutate } = useSWR<IUser | null>(
+    token ? "/auth/me" : null,
+    () => getMe(),
+    {
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+      onError: () => {
+        tokenStore.clear();
+        setToken(null);
+      },
+    }
+  );
 
-    getMe()
-      .then((u) => setUser(u))
-      .catch(() => tokenStore.clear())
-      .finally(() => setLoading(false));
-  }, []);
+  const login = (tok: string, u: IUser) => {
+    tokenStore.set(tok);
+    setToken(tok);
+    mutate(u, { revalidate: false });
+  };
 
-  function login(token: string, u: IUser) {
-    tokenStore.set(token);
-    setUser(u);
-  }
-
-  function logout() {
+  const logout = () => {
     tokenStore.clear();
-    setUser(null);
-  }
+    setToken(null);
+    mutate(null, { revalidate: false });
+  };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user: user ?? null, loading: isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

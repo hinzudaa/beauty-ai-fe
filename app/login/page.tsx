@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import useSWR from "swr";
 import { useAuth } from "@/lib/AuthContext";
 import { otpStart, otpVerify } from "@/apis";
 import { ApiError } from "@/utils/request";
@@ -11,58 +12,46 @@ export default function LoginPage() {
   const { login, user, loading } = useAuth();
   const router = useRouter();
 
-  const [step, setStep]     = useState<"phone" | "otp">("phone");
-  const [phone, setPhone]   = useState("");
-  const [error, setError]   = useState("");
-  const [busy, setBusy]     = useState(false);
+  const [step, setStep]       = useState<"phone" | "otp">("phone");
+  const [phone, setPhone]     = useState("");
+  const [error, setError]     = useState("");
+  const [busy, setBusy]       = useState(false);
   const [session, setSession] = useState<OtpStartResponse | null>(null);
-  const [secondsLeft, setSecondsLeft] = useState(0);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Already logged in → go home
   useEffect(() => {
     if (!loading && user) router.replace("/");
   }, [user, loading, router]);
 
-  // Countdown timer
-  useEffect(() => {
-    if (!session) return;
-    const expiresMs = new Date(session.expiresAt).getTime() - Date.now();
-    setSecondsLeft(Math.max(0, Math.floor(expiresMs / 1000)));
-    const t = setInterval(() => {
-      setSecondsLeft((s) => {
-        if (s <= 1) { clearInterval(t); return 0; }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, [session]);
+  const { data: secondsLeft = 0 } = useSWR(
+    session ? ["countdown", session.expiresAt] : null,
+    ([, expiresAt]: [string, string]) =>
+      Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)),
+    { refreshInterval: 1000, revalidateOnFocus: false }
+  );
 
-  // Poll verify.mn every 3 s while on otp step
-  useEffect(() => {
-    if (step !== "otp" || !session) return;
-
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await otpVerify(session.sessionId);
-        if ("token" in res) {
-          clearInterval(pollRef.current!);
-          login((res as AuthResponse).token, (res as AuthResponse).user);
-          router.replace("/");
-        }
-      } catch (err) {
+  const { data: verifyResult } = useSWR(
+    step === "otp" && session ? ["otp-verify", session.sessionId] : null,
+    ([, sessionId]: [string, string]) => otpVerify(sessionId),
+    {
+      refreshInterval: (latest) => (!latest || !("token" in latest) ? 3_000 : 0),
+      revalidateOnFocus: false,
+      shouldRetryOnError: false,
+      onError: (err: unknown) => {
         if (err instanceof ApiError && (err.status === 410 || err.status === 404)) {
-          clearInterval(pollRef.current!);
           setError("OTP хугацаа дууссан. Дахин оролдоно уу.");
           setStep("phone");
           setSession(null);
         }
-        // 202 PENDING or transient network — keep polling
-      }
-    }, 3000);
+      },
+    }
+  );
 
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [step, session, login, router]);
+  useEffect(() => {
+    if (!verifyResult || !("token" in verifyResult)) return;
+    const res = verifyResult as AuthResponse;
+    login(res.token, res.user);
+    router.replace("/");
+  }, [verifyResult, login, router]);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -84,15 +73,13 @@ export default function LoginPage() {
   }
 
   function handleRetry() {
-    if (pollRef.current) clearInterval(pollRef.current);
     setStep("phone");
     setSession(null);
     setError("");
   }
 
-  function fmt(s: number) {
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-  }
+  const fmt = (s: number) =>
+    `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   if (loading) return null;
 
@@ -100,7 +87,6 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
 
-        {/* ── Logo ── */}
         <div className="flex items-center justify-center gap-2 mb-10">
           <span className="text-gold text-base">✦</span>
           <span className="font-coffekan font-bold text-white text-2xl" style={{ letterSpacing: "0.04em" }}>
@@ -108,7 +94,6 @@ export default function LoginPage() {
           </span>
         </div>
 
-        {/* ── STEP 1: Phone ── */}
         {step === "phone" && (
           <>
             <div className="text-center mb-8">
@@ -155,7 +140,7 @@ export default function LoginPage() {
                 style={{ letterSpacing: "0.06em" }}>
                 {busy ? (
                   <span className="flex items-center justify-center gap-1.5">
-                    {[0,1,2].map((i) => (
+                    {[0, 1, 2].map((i) => (
                       <span key={i} className="w-1.5 h-1.5 rounded-full bg-white/50 animate-dot-blink inline-block"
                         style={{ animationDelay: `${i * 0.15}s` }} />
                     ))}
@@ -166,7 +151,6 @@ export default function LoginPage() {
           </>
         )}
 
-        {/* ── STEP 2: OTP ── */}
         {step === "otp" && session && (
           <>
             <div className="text-center mb-8">
@@ -178,29 +162,24 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* Instruction card */}
             <div className="bg-white/[0.04] border border-white/[0.08] rounded-[20px] p-5 mb-4 text-center">
               <p className="text-sm text-white/70 font-sans mb-4" style={{ lineHeight: 1.7 }}>
                 {session.displayInstruction}
               </p>
-
-              {/* Tap-to-SMS button */}
               <a
                 href={session.smsUri}
                 className="inline-flex items-center gap-2 bg-white text-black text-sm font-semibold px-6 py-3 rounded-full hover:scale-[1.02] hover:opacity-90 transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)] font-sans"
                 style={{ letterSpacing: "0.04em" }}>
                 <span>✉</span> SMS нээх
               </a>
-
               <p className="mt-3 text-[0.68rem] text-white/25 font-sans">
                 Гар утас дээр дарна уу
               </p>
             </div>
 
-            {/* Polling indicator */}
             <div className="flex items-center justify-center gap-3 mb-4">
               <span className="flex gap-1.5">
-                {[0,1,2].map((i) => (
+                {[0, 1, 2].map((i) => (
                   <span key={i} className="w-1.5 h-1.5 rounded-full bg-gold animate-dot-blink inline-block"
                     style={{ animationDelay: `${i * 0.2}s` }} />
                 ))}

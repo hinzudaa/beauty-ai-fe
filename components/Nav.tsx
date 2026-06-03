@@ -21,7 +21,6 @@ export default function Nav() {
     router.push("/");
   }
 
-  // Hide entirely on login page
   if (pathname === "/login") return null;
 
   return (
@@ -53,7 +52,6 @@ export default function Nav() {
         })}
       </div>
 
-      {/* Auth CTA */}
       {!loading && (
         user ? (
           <div className="flex items-center gap-3 shrink-0">
