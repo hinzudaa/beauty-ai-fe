@@ -3,15 +3,19 @@
 import Link from "next/link";
 
 interface Analysis {
-  faceShape:          string;
-  lookmaxScore:       number;
-  skinTone:           string;
-  strengths:          string[];
-  improvements:       string[];
+  faceShape:           string;
+  lookmaxScore:        number;
+  skinTone:            string;
+  undertone?:          string;
+  seasonalColor?:      string;
+  hiddenStrengths?:    string[];
+  strengths:           string[];
+  improvements:        string[];
+  makeupTips?:         string;
   hairRecommendations: string[];
-  outfitStyle:        string;
-  colorPalette:       string[];
-  features:           Record<string, string>;
+  outfitStyle:         string;
+  colorPalette:        string[];
+  features:            Record<string, string>;
 }
 
 interface ResultData {
@@ -91,6 +95,37 @@ export default function ShareResultClient({ data, shareUrl }: { data: ResultData
           )}
         </div>
 
+        {/* Undertone + Seasonal */}
+        {(analysis.undertone || analysis.seasonalColor) && (
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            {analysis.undertone && (
+              <div className="card p-4">
+                <p className="label-style mb-1" style={{ color: "#d97706" }}>🌡 Далд тон</p>
+                <p className="text-[0.9rem] font-bold text-[#1c1c1e]">{analysis.undertone}</p>
+              </div>
+            )}
+            {analysis.seasonalColor && (
+              <div className="card p-4">
+                <p className="label-style mb-1" style={{ color: "#059669" }}>🌸 Өнгөний улирал</p>
+                <p className="text-[0.9rem] font-bold text-[#1c1c1e]">{analysis.seasonalColor}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Hidden strengths */}
+        {analysis.hiddenStrengths && analysis.hiddenStrengths.length > 0 && (
+          <div className="card p-5 mb-4"
+            style={{ background: "linear-gradient(135deg,rgba(147,51,234,0.04),rgba(167,139,250,0.02))", border: "1px solid rgba(147,51,234,0.15)" }}>
+            <p className="label-style text-[#9333ea] mb-3">✨ Бусад анзаардаг онцлог</p>
+            {analysis.hiddenStrengths.map((s, i) => (
+              <div key={i} className="flex gap-2 text-[0.84rem] text-[#3a3a3c] mb-2">
+                <span className="text-[#9333ea] shrink-0">✦</span>{s}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Features */}
         {analysis.features && (
           <div className="card p-5 mb-4">
@@ -125,6 +160,14 @@ export default function ShareResultClient({ data, shareUrl }: { data: ResultData
             ))}
           </div>
         </div>
+
+        {/* Makeup tips */}
+        {analysis.makeupTips && (
+          <div className="card p-5 mb-4">
+            <p className="label-style mb-2" style={{ color: "#ec4899" }}>💄 Нүүр будалт</p>
+            <p className="text-[0.84rem] text-[#3a3a3c] leading-[1.65]">{analysis.makeupTips}</p>
+          </div>
+        )}
 
         {/* Generated looks */}
         {looks.length > 0 && (

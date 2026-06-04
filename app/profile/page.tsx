@@ -355,6 +355,36 @@ export default function ProfilePage() {
                         )}
                       </div>
 
+                      {/* Undertone + Seasonal color */}
+                      {(a.analysis.undertone || a.analysis.seasonalColor) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {a.analysis.undertone && (
+                            <div className="bg-[#f9f9fb] rounded-xl p-3 border border-[rgba(0,0,0,0.05)]">
+                              <p className="label-style mb-1" style={{ color: "#d97706" }}>🌡 Арьсны далд тон</p>
+                              <p className="text-[0.85rem] font-bold text-[#1c1c1e]">{a.analysis.undertone}</p>
+                            </div>
+                          )}
+                          {a.analysis.seasonalColor && (
+                            <div className="bg-[#f9f9fb] rounded-xl p-3 border border-[rgba(0,0,0,0.05)]">
+                              <p className="label-style mb-1" style={{ color: "#059669" }}>🌸 Өнгөний улирал</p>
+                              <p className="text-[0.85rem] font-bold text-[#1c1c1e]">{a.analysis.seasonalColor}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Hidden strengths */}
+                      {a.analysis.hiddenStrengths?.length > 0 && (
+                        <div className="bg-[rgba(147,51,234,0.04)] rounded-xl p-3 border border-[rgba(147,51,234,0.12)]">
+                          <p className="label-style text-[#9333ea] mb-2">✨ Бусад анзаардаг онцлог</p>
+                          {a.analysis.hiddenStrengths.map((s: string, i: number) => (
+                            <div key={i} className="flex gap-2 text-[0.8rem] text-[#3a3a3c] mb-1">
+                              <span className="text-[#9333ea] shrink-0">✦</span>{s}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       {/* Features breakdown */}
                       {a.analysis.features && Object.keys(a.analysis.features).length > 0 && (
                         <div>
@@ -392,6 +422,14 @@ export default function ProfilePage() {
                           ))}
                         </div>
                       </div>
+
+                      {/* Makeup tips */}
+                      {a.analysis.makeupTips && (
+                        <div className="bg-[#f9f9fb] rounded-xl p-3 border border-[rgba(0,0,0,0.05)]">
+                          <p className="label-style mb-1" style={{ color: "#ec4899" }}>💄 Нүүр будалт</p>
+                          <p className="text-[0.78rem] text-[#3a3a3c] leading-[1.55]">{a.analysis.makeupTips}</p>
+                        </div>
+                      )}
 
                       {/* Hair & Style */}
                       {(a.analysis.hairRecommendations?.length > 0 || a.analysis.outfitStyle) && (
