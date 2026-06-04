@@ -34,13 +34,21 @@ export default function ProfilePage() {
   const { user, logout } = useAuth();
   const router = useRouter();
 
+  // ── All hooks must be called unconditionally before any early return ──
   const { data, isLoading } = useSWR<ProfileData>(
     user ? "profile" : null,
     () => getProfile(),
     { revalidateOnFocus: false }
   );
 
-  function handleLogout() { logout(); router.push("/"); }
+  const [analysisPage, setAnalysisPage] = useState(1);
+  const [expanded, setExpanded]         = useState<string | null>(null);
+
+  const { data: analysesData, isLoading: analysesLoading } = useSWR(
+    user ? `analyses-${analysisPage}` : null,
+    () => getAnalyses(analysisPage),
+    { revalidateOnFocus: false }
+  );
 
   if (!user && !isLoading) {
     return (
@@ -55,15 +63,6 @@ export default function ProfilePage() {
       </div>
     );
   }
-
-  // Analyses history
-  const [analysisPage, setAnalysisPage] = useState(1);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const { data: analysesData, isLoading: analysesLoading } = useSWR(
-    user ? `analyses-${analysisPage}` : null,
-    () => getAnalyses(analysisPage),
-    { revalidateOnFocus: false }
-  );
 
   const sub        = data?.subscription;
   const totalSpend = data?.payments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0) ?? 0;
@@ -87,10 +86,6 @@ export default function ProfilePage() {
               </span>
             )}
           </div>
-          <button onClick={handleLogout}
-            className="text-[0.84rem] font-semibold text-[#6e6e73] bg-transparent border border-[rgba(0,0,0,0.1)] rounded-full px-5 py-[9px] cursor-pointer self-start md:self-auto">
-            Гарах
-          </button>
         </div>
         <div className="mt-7 h-px bg-[rgba(0,0,0,0.07)]" />
       </section>

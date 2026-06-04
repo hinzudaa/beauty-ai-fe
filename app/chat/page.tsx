@@ -44,7 +44,7 @@ function renderText(text: string) {
 /* ── Locked gate shown to non-Pro users ────────────────────────── */
 function ProGate({ reason }: { reason: "no-auth" | "no-pro" }) {
   return (
-    <div className="flex-1 flex items-center justify-center p-8">
+    <div className="flex-1 flex items-center justify-center">
       <div className="max-w-[440px] w-full text-center">
         {/* Icon */}
         <div className="w-20 h-20 rounded-full bg-[rgba(147,51,234,0.1)] border-2 border-[rgba(147,51,234,0.2)] flex items-center justify-center mx-auto mb-6">
@@ -91,9 +91,7 @@ function ProGate({ reason }: { reason: "no-auth" | "no-pro" }) {
               style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)", boxShadow: "0 4px 20px rgba(147,51,234,0.4)" }}>
               Pro захиалга авах →
             </Link>
-            <p className="text-[0.78rem] text-[#aeaeb2]">
-              ₮29,999 / сар · Дурдсан үед цуцлах боломжтой
-            </p>
+           
           </div>
         )}
       </div>
@@ -103,7 +101,10 @@ function ProGate({ reason }: { reason: "no-auth" | "no-pro" }) {
 
 /* ── Main chat UI (Pro only) ───────────────────────────────────── */
 export default function ChatPage() {
-  const [authState, setAuthState] = useState<AuthState>("loading");
+  // Lazy initializer: if no token at all, skip straight to "no-auth" without an effect
+  const [authState, setAuthState] = useState<AuthState>(() =>
+    tokenStore.get() ? "loading" : "no-auth"
+  );
   const [messages, setMessages]   = useState<Message[]>([
     { role: "ai", text: "Сайн байна уу. Би таны хувийн AI Pro стилист. Хувцас, үс засал, грим — ямар ч асуулт асуугаарай." },
   ]);
@@ -111,15 +112,16 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Check Pro subscription on mount
+  // Fetch profile only when we have a token (authState starts as "loading")
   useEffect(() => {
-    if (!tokenStore.get()) { setAuthState("no-auth"); return; }
+    if (authState !== "loading") return;
     getProfile()
       .then((p) => {
         const isPro = p.subscription?.plan === "pro" && p.subscription?.status === "active";
         setAuthState(isPro ? "ok" : "no-pro");
       })
       .catch(() => setAuthState("no-auth"));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);

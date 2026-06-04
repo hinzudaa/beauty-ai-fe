@@ -317,7 +317,7 @@ export default async function Home() {
             <h2 className="text-[clamp(1.9rem,4vw,2.8rem)] tracking-[-0.03em] leading-[1.1] mb-4">
               Хэрэгцээндээ тохирсон<br />багцаа сонгоорой
             </h2>
-            <p className="text-[0.95rem] text-[#6e6e73] max-w-[460px] mx-auto leading-[1.75]">
+            <p className="text-[0.95rem] text-[#6e6e73] leading-[1.75]">
               Нүүр · Үс & Грим · Хувцас — нэг дор. Хэрэгцээндээ тохирсон багцаа сонгоно уу.
             </p>
           </div>

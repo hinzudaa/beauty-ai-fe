@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { runFullAnalysis, generateLooks, FullAnalysisResult, GeneratedLook } from "@/apis/analyze";
 import { uploadSelfie } from "@/apis/upload";
 import { createSubscriptionInvoice, checkPayment, InvoiceResponse, QPayUrl } from "@/apis/payment";
@@ -56,40 +57,42 @@ const PLAN_META = [
 ];
 
 export default function AnalyzePage() {
-  const [step, setStep]               = useState<Step>("checking");
-  const [preview, setPreview]         = useState<string | null>(() => photoStore.get()?.preview ?? null);
-  const [photoUrl, setPhotoUrl]       = useState<string | null>(null);   // Cloudflare R2 CDN URL
-  const [uploading, setUploading]     = useState(false);
-  const [occasion, setOccasion]       = useState("interview");
-  const [selectedPlan, setSelectedPlan] = useState<"basic" | "pro" | null>(null);
-  const [invoice, setInvoice]         = useState<InvoiceResponse | null>(null);
-  const [error, setError]             = useState<string | null>(null);
-  const [profile, setProfile]         = useState<ProfileData | null>(null);
-  const [result, setResult]           = useState<FullAnalysisResult | null>(null);
-  const [activeTab, setActiveTab]     = useState<"hair" | "outfit">("hair");
-  const [prices, setPrices]           = useState({ basic: 19999, pro: 29999 });
-  const [notLoggedIn, setNotLoggedIn] = useState(false);
+  // Lazy initializers — run synchronously once, avoiding setState-in-effect
+  const [step, setStep]               = useState<Step>(() =>
+    tokenStore.get() ? "checking" : "subscribe"
+  );
+  const [notLoggedIn, setNotLoggedIn] = useState(() => !tokenStore.get());
+  const [selectedPlan, setSelectedPlan] = useState<"basic" | "pro" | null>(() => {
+    const p = typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("plan")
+      : null;
+    return p === "basic" || p === "pro" ? p : null;
+  });
+
+  const [preview, setPreview]   = useState<string | null>(() => photoStore.get()?.preview ?? null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [occasion, setOccasion]   = useState("interview");
+  const [invoice, setInvoice]     = useState<InvoiceResponse | null>(null);
+  const [error, setError]         = useState<string | null>(null);
+  const [profile, setProfile]     = useState<ProfileData | null>(null);
+  const [result, setResult]       = useState<FullAnalysisResult | null>(null);
+  const [activeTab, setActiveTab] = useState<"hair" | "outfit">("hair");
+  const [prices, setPrices]       = useState({ basic: 19999, pro: 29999 });
   const [generatedLooks, setGeneratedLooks] = useState<GeneratedLook[]>([]);
   const [generatingLooks, setGeneratingLooks] = useState(false);
+  const router   = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  /* ── On mount: check auth → subscription → route to correct first step ── */
+  /* ── On mount: async only — no synchronous setState here ── */
   useEffect(() => {
-    // Read ?plan= param from URL (from home page pricing CTA)
-    const planParam = new URLSearchParams(window.location.search).get("plan");
-    if (planParam === "basic" || planParam === "pro") setSelectedPlan(planParam);
-
-    if (!tokenStore.get()) {
-      setNotLoggedIn(true);
-      setStep("subscribe");   // show plan cards even without auth; lock payment
-      return;
-    }
+    // No token → already handled by lazy init (step = "subscribe", notLoggedIn = true)
+    if (!tokenStore.get()) return;
 
     getProfile()
       .then((p) => {
         setProfile(p);
         if (p.subscription?.status === "active") {
-          // Already subscribed → skip to upload
           setStep(preview && photoUrl ? "occasion" : "upload");
         } else {
           setStep("subscribe");
@@ -97,7 +100,6 @@ export default function AnalyzePage() {
       })
       .catch(() => setStep("subscribe"));
 
-    // Fetch live prices
     getPrices()
       .then((p) => setPrices({ basic: p.basicPrice, pro: p.proPrice }))
       .catch(() => {});
@@ -128,7 +130,7 @@ export default function AnalyzePage() {
     if (!selectedPlan) return;
     if (!tokenStore.get()) {
       // Not logged in → redirect to login, come back here with plan pre-selected
-      window.location.href = `/login?next=${encodeURIComponent(window.location.pathname + window.location.search || `?plan=${selectedPlan}`)}`;
+      router.push(`/login?next=${encodeURIComponent(window.location.pathname + (window.location.search || `?plan=${selectedPlan}`))}`);
       return;
     }
     setError(null);
