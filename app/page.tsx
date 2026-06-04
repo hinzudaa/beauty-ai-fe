@@ -336,9 +336,9 @@ export default async function Home() {
             </div>
             {[
               { label: "Looksmax шинжилгээ", basic: "✓",  std: "✓",  pro: "✓"  },
-              { label: "AI Look зурагнуудs",  basic: "2",  std: "3",  pro: "5"  },
+              { label: "AI Look зурагнуудs",  basic: "2",  std: "2",  pro: "4"  },
               { label: "AI Stylist Chat",     basic: "—",  std: "—",  pro: "✓"  },
-              { label: "Сарын шинжилгээ",    basic: "5",  std: "10", pro: "20" },
+              { label: "Сарын шинжилгээ",    basic: "5",  std: "10", pro: "10" },
               { label: "Үнэ",                basic: `₮${basicPrice.toLocaleString()}`, std: `₮${standardPrice.toLocaleString()}`, pro: `₮${proPrice.toLocaleString()}` },
             ].map((r, i) => (
               <div key={i} className={`grid grid-cols-4 px-4 py-3 ${i % 2 === 0 ? "bg-white" : "bg-[rgba(0,0,0,0.01)]"} border-b border-[rgba(0,0,0,0.04)] last:border-0`}>

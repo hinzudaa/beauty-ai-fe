@@ -45,10 +45,10 @@ const PLAN_META = [
   {
     id:        "pro" as const,
     name:      "Pro",
-    limit:     20,
+    limit:     10,
     features:  [
-      "Сард 20 шинжилгээ",
-      "5 AI Look зураг (2 үс + 2 хувцас + 1 casual)",
+      "Сард 10 шинжилгээ",
+      "4 AI Look зураг (2 үс + 2 хувцас)",
       "AI Personal Stylist Chat",
       "Бүх Basic боломжууд",
     ],
@@ -192,6 +192,7 @@ export default function AnalyzePage() {
         photoUrl,
         r.analysisId,
         {
+          gender:              r.analysis.gender,
           faceShape:           r.analysis.faceShape,
           skinTone:            r.analysis.skinTone,
           hairRecommendations: r.analysis.hairRecommendations ?? [],
@@ -252,7 +253,7 @@ export default function AnalyzePage() {
           <span className="label-style inline-flex items-center gap-[6px] px-[13px] py-[5px] rounded-full bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] text-[#9333ea] mb-5 block w-fit">
             ✦ &nbsp;AI Шинжилгээ · Нүүр · Үс & Грим · Хувцас
           </span>
-          <h1 className="text-[clamp(1.8rem,4vw,2.6rem)] tracking-[-0.03em] leading-[1.1]">
+          <h1 className="text-[clamp(1.8rem,4vw,2.6rem)] tracking-[-0.03em] leading-[1.1] text-center">
             {step === "checking"  && "Уншиж байна..."}
             {step === "subscribe" && "Захиалга сонгох"}
             {step === "payment"   && "QPay төлбөр"}
@@ -400,7 +401,7 @@ export default function AnalyzePage() {
                 {invoice.amount.toLocaleString()}₮
               </p>
               <p className="text-[0.85rem] text-[#8e8e93] mb-2">
-                {selectedPlan === "pro" ? "Pro · сард 20 шинжилгээ · 5 AI look" : "Basic · сард 5 шинжилгээ · 2 AI look"}
+                {selectedPlan === "pro" ? "Pro · сард 10 шинжилгээ · 4 AI look" : "Basic · сард 5 шинжилгээ · 2 AI look"}
               </p>
               {upgradeInfo?.isUpgrade && (
                 <div className="inline-flex items-center gap-2 bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] rounded-full px-4 py-1.5 mb-6">
@@ -709,9 +710,9 @@ export default function AnalyzePage() {
               </div>
             )}
 
-            {/* AI generated look images — Pro only */}
+            {/* AI generated look images */}
             {(generatingLooks || generatedLooks.length > 0) && (
-              <div className="card p-5">
+              <div className="card p-4 sm:p-5">
                 <div className="flex items-center justify-between mb-4">
                   <p className="label-style">AI үүсгэсэн look-ууд</p>
                   {generatingLooks && (
@@ -723,20 +724,29 @@ export default function AnalyzePage() {
                     </div>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+
+                {/* Mobile: 1 col full-width · Desktop: 2 col */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {generatedLooks.map((look) => (
-                    <div key={look.name} className="relative rounded-xl overflow-hidden aspect-square bg-[#f5f5f7]">
+                    <div key={look.name} className="relative rounded-[16px] overflow-hidden bg-[#f5f5f7]" style={{ aspectRatio: "3/4" }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={look.imageUrl} alt={look.name} className="w-full h-full object-cover" />
-                      <div className="absolute bottom-0 left-0 right-0 px-2 pb-[6px] pt-[14px]"
-                        style={{ background: "linear-gradient(to top,rgba(0,0,0,0.7),transparent)" }}>
-                        <p className="text-[0.62rem] font-bold text-white text-center">{look.name}</p>
+                      <img src={look.imageUrl} alt={look.name} className="w-full h-full object-cover object-top" />
+                      <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-10"
+                        style={{ background: "linear-gradient(to top,rgba(0,0,0,0.75),transparent)" }}>
+                        <p className="text-[0.82rem] font-bold text-white text-center tracking-wide">{look.name}</p>
                       </div>
                     </div>
                   ))}
+
+                  {/* Loading placeholders */}
                   {generatingLooks && generatedLooks.length === 0 && (
-                    [...Array(4)].map((_, i) => (
-                      <div key={i} className="rounded-xl bg-[rgba(147,51,234,0.06)] aspect-square animate-pulse border border-[rgba(147,51,234,0.1)]" />
+                    [...Array(2)].map((_, i) => (
+                      <div key={i} className="rounded-[16px] bg-[rgba(147,51,234,0.06)] animate-pulse border border-[rgba(147,51,234,0.1)]" style={{ aspectRatio: "3/4" }}>
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                          <div className="w-10 h-10 rounded-full border-2 border-[rgba(147,51,234,0.2)] border-t-[#9333ea] animate-spin" />
+                          <p className="text-[0.75rem] text-[#9333ea] font-medium">AI үүсгэж байна...</p>
+                        </div>
+                      </div>
                     ))
                   )}
                 </div>

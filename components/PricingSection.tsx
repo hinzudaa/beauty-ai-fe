@@ -29,12 +29,12 @@ const PLAN_FEATURES = {
   standard: [
     "Сард 10 шинжилгээ",
     "Бүрэн AI looksmax шинжилгээ",
-    "3 AI Look зураг",
+    "2 AI Look зураг",
     "Өнгөний палет & зөвлөмж",
   ],
   pro: [
-    "Сард 20 шинжилгээ",
-    "5 AI Look зураг",
+    "Сард 10 шинжилгээ",
+    "4 AI Look зураг",
     "AI Personal Stylist Chat",
     "Бүх Basic боломжууд",
   ],
@@ -304,9 +304,9 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
                 <p className="text-[1.2rem] font-extrabold text-[#1c1c1e] mb-2">Төлбөр амжилттай!</p>
                 <p className="text-[0.88rem] text-[#6e6e73] mb-6">
                   {activePlan === "pro"
-                    ? "Pro идэвхжлээ. Сард 20 шинжилгээ · 5 AI look · AI Стилист чат."
+                    ? "Pro идэвхжлээ. Сард 10 шинжилгээ · 4 AI look · AI Стилист чат."
                     : activePlan === "standard"
-                    ? "Standard идэвхжлээ. Сард 10 шинжилгээ · 3 AI look."
+                    ? "Standard идэвхжлээ. Сард 10 шинжилгээ · 2 AI look."
                     : "Basic идэвхжлээ. Сард 5 шинжилгээ · 2 AI look."}
                 </p>
                 <Link href="/analyze"
@@ -331,8 +331,8 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
                     {invoice.amount.toLocaleString()}₮
                   </p>
                   <p className="text-[0.84rem] text-[#8e8e93]">
-                    {activePlan === "pro" ? "Pro · сард 20 шинжилгээ · 5 AI look"
-                      : activePlan === "standard" ? "Standard · сард 10 шинжилгээ · 3 AI look"
+                    {activePlan === "pro" ? "Pro · сард 10 шинжилгээ · 4 AI look"
+                      : activePlan === "standard" ? "Standard · сард 10 шинжилгээ · 2 AI look"
                       : "Basic · сард 5 шинжилгээ · 2 AI look"}
                   </p>
                   {activePlan && upgradeInfos[activePlan as "standard" | "pro"]?.isUpgrade && (
