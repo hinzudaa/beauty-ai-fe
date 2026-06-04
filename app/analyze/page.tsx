@@ -82,6 +82,8 @@ export default function AnalyzePage() {
   const [generatedLooks, setGeneratedLooks]   = useState<GeneratedLook[]>([]);
   const [generatingLooks, setGeneratingLooks] = useState(false);
   const [upgradeInfo, setUpgradeInfo]         = useState<UpgradePrice | null>(null);
+  const [proInvoice, setProInvoice]           = useState<InvoiceResponse | null>(null);
+  const [proPayState, setProPayState]         = useState<"idle" | "creating" | "waiting" | "success">("idle");
   const router   = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -206,6 +208,31 @@ export default function AnalyzePage() {
       else { setError(msg); setStep("occasion"); }
     }
   }, [photoUrl, occasion]);
+
+  async function handleProUpgrade() {
+    if (!tokenStore.get()) { router.push("/login"); return; }
+    setProPayState("creating");
+    try {
+      const inv = await createSubscriptionInvoice("pro");
+      setProInvoice(inv);
+      setProPayState("waiting");
+
+      const timer = setInterval(async () => {
+        try {
+          const s = await checkPayment(inv.invoiceId);
+          if (s.paid) {
+            clearInterval(timer);
+            setProPayState("success");
+            setTimeout(() => router.push("/"), 2000);
+          }
+        } catch { /* keep polling */ }
+      }, 3000);
+      setTimeout(() => { clearInterval(timer); setProPayState("idle"); }, 15 * 60 * 1000);
+    } catch (err) {
+      setProPayState("idle");
+      setError(err instanceof Error ? err.message : "Алдаа гарлаа");
+    }
+  }
 
   function resetToUpload() {
     setPreview(null); setPhotoUrl(null); setResult(null); setError(null);
@@ -626,11 +653,13 @@ export default function AnalyzePage() {
                   <p className="text-[0.9rem] font-bold text-[#1c1c1e] mb-1">AI Look зураг — Pro захиалга</p>
                   <p className="text-[0.8rem] text-[#6e6e73]">Pro захиалга авснаар таны selfie дээр тулгуурлан үс засалт, хувцасны look зурагнуудыг AI-аар үүсгэнэ.</p>
                 </div>
-                <a href="/analyze?plan=pro"
-                  className="shrink-0 text-[0.8rem] font-bold text-white px-4 py-2 rounded-full whitespace-nowrap"
-                  style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)" }}>
-                  Pro авах →
-                </a>
+                <button
+                  onClick={handleProUpgrade}
+                  disabled={proPayState !== "idle"}
+                  className="shrink-0 text-[0.8rem] font-bold text-white px-4 py-2 rounded-full whitespace-nowrap border-none cursor-pointer"
+                  style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)", opacity: proPayState !== "idle" ? 0.7 : 1 }}>
+                  {proPayState === "creating" ? "..." : "Pro авах →"}
+                </button>
               </div>
             )}
 
@@ -682,6 +711,77 @@ export default function AnalyzePage() {
           </div>
         )}
       </div>
+
+      {/* ── Pro upgrade QPay modal ── */}
+      {(proPayState === "waiting" || proPayState === "success") && proInvoice && (
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 pt-[72px]"
+          onClick={(e) => { if (e.target === e.currentTarget && proPayState !== "success") setProPayState("idle"); }}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[4px]" />
+          <div className="relative z-[1] w-full max-w-[400px] bg-white rounded-[24px] shadow-[0_24px_64px_rgba(0,0,0,0.18)] overflow-hidden flex flex-col max-h-[calc(100vh-88px)] anim-scale-in">
+
+            {proPayState === "success" ? (
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 rounded-full bg-[rgba(22,163,74,0.1)] border-2 border-[rgba(22,163,74,0.2)] flex items-center justify-center mx-auto mb-4">
+                  <span className="text-[2rem]">✅</span>
+                </div>
+                <p className="text-[1.2rem] font-extrabold text-[#1c1c1e] mb-2">Pro идэвхжлээ!</p>
+                <p className="text-[0.88rem] text-[#6e6e73] mb-1">Сард 40 шинжилгээ + AI Look зурагнууд.</p>
+                <p className="text-[0.8rem] text-[#aeaeb2]">Нүүр хуудас руу шилжиж байна...</p>
+              </div>
+            ) : (
+              <>
+                {/* Fixed top */}
+                <div className="px-6 pt-6 pb-4 text-center shrink-0">
+                  <button onClick={() => setProPayState("idle")}
+                    className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[rgba(0,0,0,0.06)] flex items-center justify-center text-[#6e6e73] cursor-pointer border-none text-[1.1rem] hover:bg-[rgba(0,0,0,0.1)] transition-all leading-none">
+                    ×
+                  </button>
+                  <p className="label-style mb-2">Pro захиалга — Upgrade</p>
+                  <p className="text-[2rem] font-extrabold text-[#1c1c1e] mb-1 tracking-[-0.02em]">{proInvoice.amount.toLocaleString()}₮</p>
+                  <p className="text-[0.82rem] text-[#8e8e93]">Сард 40 шинжилгээ + AI Look зурагнууд</p>
+                  {upgradeInfo?.isUpgrade && (
+                    <p className="text-[0.72rem] font-semibold text-[#9333ea] mt-1">
+                      -{upgradeInfo.discount.toLocaleString()}₮ хөнгөлөлт агуулсан
+                    </p>
+                  )}
+                  {proInvoice.qrImage && (
+                    <div className="flex justify-center mt-4">
+                      <div className="bg-white p-3 rounded-[18px] border border-[rgba(0,0,0,0.07)] shadow-[0_4px_16px_rgba(0,0,0,0.08)]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`data:image/png;base64,${proInvoice.qrImage}`} alt="QPay QR" width={160} height={160} className="rounded-lg block" />
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 justify-center mt-4">
+                    {[0,1,2].map((i) => (
+                      <span key={i} className="animate-dot-blink w-[5px] h-[5px] rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.2}s` }} />
+                    ))}
+                    <span className="text-[0.8rem] text-[#8e8e93]">Төлбөр хүлээж байна...</span>
+                  </div>
+                </div>
+
+                {/* Scrollable bank list */}
+                {proInvoice.urls && proInvoice.urls.length > 0 && (
+                  <div className="border-t border-[rgba(0,0,0,0.06)] px-4 py-3 overflow-y-auto flex-1">
+                    <p className="label-style mb-2 text-center">Банкны апп-аар төлөх</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {proInvoice.urls.map((u: QPayUrl) => (
+                        <a key={u.name} href={u.link} target="_blank" rel="noopener noreferrer"
+                          className="flex flex-col items-center gap-1 px-2 py-2 rounded-xl bg-[#f5f5f7] border border-[rgba(0,0,0,0.06)] hover:bg-[rgba(147,51,234,0.04)] hover:border-[rgba(147,51,234,0.2)] transition-all">
+                          {u.logo
+                            ? <img src={u.logo} alt={u.name} width={32} height={32} className="rounded-[8px] object-contain" />
+                            : <div className="w-8 h-8 rounded-[8px] bg-[rgba(0,0,0,0.06)]" />}
+                          <span className="text-[0.62rem] text-[#3a3a3c] text-center font-medium leading-tight overflow-hidden" style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const }}>{u.name}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
