@@ -169,27 +169,19 @@ export default function AnalyzePage() {
       setResult(r); setActiveTab("hair"); setStep("result");
       setGeneratedLooks([]); setGeneratingLooks(true);
 
-      // Build DALL-E prompts from hair + outfit recommendations
-      const hairItems = (r.analysis.hairRecommendations ?? []).map((h) => ({
-        name:   h,
-        prompt: `Professional beauty portrait of a young Asian woman with ${h} hairstyle. Studio lighting, clean background, high quality, realistic photo.`,
-      }));
-      const outfitItem = r.analysis.outfitStyle
-        ? [{
-            name:   "Recommended Style",
-            prompt: `Full body professional fashion photo of a young Asian woman wearing ${r.analysis.outfitStyle}. Studio lighting, clean background, high quality.`,
-          }]
-        : [];
-
-      const items = [...hairItems, ...outfitItem].slice(0, 4);
-      if (items.length > 0) {
-        generateLooks(photoUrl, items)
-          .then(({ looks }) => setGeneratedLooks(looks))
-          .catch(() => { /* images optional — analysis already shown */ })
-          .finally(() => setGeneratingLooks(false));
-      } else {
-        setGeneratingLooks(false);
-      }
+      // Pass analysis data so DALL-E prompts are informed by face shape + skin tone
+      generateLooks(
+        {
+          faceShape:           r.analysis.faceShape,
+          skinTone:            r.analysis.skinTone,
+          hairRecommendations: r.analysis.hairRecommendations ?? [],
+          outfitStyle:         r.analysis.outfitStyle ?? "",
+        },
+        occasion
+      )
+        .then(({ looks }) => setGeneratedLooks(looks))
+        .catch(() => { /* images optional — analysis already shown */ })
+        .finally(() => setGeneratingLooks(false));
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Алдаа гарлаа";
       if (msg === "needsSubscription") { setStep("subscribe"); }

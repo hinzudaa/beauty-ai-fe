@@ -44,14 +44,15 @@ export function runFullAnalysis(photoUrl: string, event: string): Promise<FullAn
 }
 
 /**
- * DALL-E 3 generates look inspiration images.
+ * DALL-E 3 generates inspiration images informed by the looksmax analysis.
+ * Face shape + skin tone + recommendations are baked into every prompt.
  * Called after runFullAnalysis — images load progressively.
  */
 export function generateLooks(
-  photoUrl: string,
-  items: Array<{ name: string; prompt: string }>
+  analysis: Pick<LooksMaxAnalysis, "faceShape" | "skinTone" | "hairRecommendations" | "outfitStyle">,
+  occasion: string
 ): Promise<{ looks: GeneratedLook[] }> {
-  return http.post("/generate-looks", { photoUrl, items });
+  return http.post("/generate-looks", { analysis, occasion });
 }
 
 export function fileToDataUrl(file: File): Promise<string> {
