@@ -14,6 +14,11 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "Looka — AI Beauty Platform",
   description: "Монгол хүний нүүр, биеийн онцлогт тохирсон AI гоо сайхны зөвлөгч",
+  icons: {
+    icon:        "/favicon.png",
+    shortcut:    "/favicon.png",
+    apple:       "/favicon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
