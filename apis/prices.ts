@@ -1,11 +1,12 @@
 import { siteUrl } from "@/config/site";
 
 export interface Prices {
-  basicPrice: number;
-  proPrice:   number;
+  basicPrice:    number;
+  standardPrice: number;
+  proPrice:      number;
 }
 
-const DEFAULTS: Prices = { basicPrice: 19999, proPrice: 29999 };
+const DEFAULTS: Prices = { basicPrice: 19999, standardPrice: 24999, proPrice: 29999 };
 
 /** Fetch current subscription prices from backend (no auth required) */
 export async function getPrices(): Promise<Prices> {

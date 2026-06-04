@@ -118,7 +118,10 @@ function PricingCard({ name, price, tag, features, cta, href, highlight = false,
 }
 
 export default async function Home() {
-  const { basicPrice, proPrice } = await getPrices();
+  const prices = await getPrices();
+  const basicPrice    = prices.basicPrice    ?? 19999;
+  const standardPrice = prices.standardPrice ?? 24999;
+  const proPrice      = prices.proPrice      ?? 29999;
   return (
     <div className="bg-[#f2f2f7] min-h-screen">
 
@@ -323,30 +326,31 @@ export default async function Home() {
             </p>
           </div>
 
-          {/* Comparison table */}
+          {/* Comparison table — 4 columns including Standard */}
           <div className="anim-fade-up delay-100 max-w-[820px] mx-auto mb-8 overflow-hidden rounded-[18px] border border-[rgba(0,0,0,0.07)] shadow-[0_2px_16px_rgba(0,0,0,0.05)]">
-            <div className="grid grid-cols-3 bg-[rgba(0,0,0,0.03)] px-5 py-3 border-b border-[rgba(0,0,0,0.06)]">
-              <p className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-[#8e8e93]">Боломж</p>
-              <p className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-[#3b82f6] text-center">Basic</p>
-              <p className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-[#9333ea] text-center">Pro</p>
+            <div className="grid grid-cols-4 bg-[rgba(0,0,0,0.03)] px-4 py-3 border-b border-[rgba(0,0,0,0.06)]">
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.1em] text-[#8e8e93]">Боломж</p>
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.1em] text-[#3b82f6] text-center">Basic</p>
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.1em] text-[#6e6e73] text-center">Standard</p>
+              <p className="text-[0.68rem] font-bold uppercase tracking-[0.1em] text-[#9333ea] text-center">Pro</p>
             </div>
             {[
-              { label: "Looksmaxxing шинжилгээ",     basic: "✓",  pro: "✓"  },
-              { label: "Оноо (1–10), нүүрний онцлог", basic: "✓",  pro: "✓"  },
-              { label: "Үс засал & хувцасны зөвлөмж", basic: "✓",  pro: "✓"  },
-              { label: "AI Look зурагнуудs (InstantID)", basic: "2",  pro: "5",  proOnly: true },
-              { label: "AI Personal Stylist Chat",    basic: "—",  pro: "✓",  proOnly: true },
-              { label: "Сарын шинжилгээний тоо",     basic: "5",  pro: "20" },
+              { label: "Looksmax шинжилгээ", basic: "✓",  std: "✓",  pro: "✓"  },
+              { label: "AI Look зурагнуудs",  basic: "2",  std: "3",  pro: "5"  },
+              { label: "AI Stylist Chat",     basic: "—",  std: "—",  pro: "✓"  },
+              { label: "Сарын шинжилгээ",    basic: "5",  std: "10", pro: "20" },
+              { label: "Үнэ",                basic: `₮${basicPrice.toLocaleString()}`, std: `₮${standardPrice.toLocaleString()}`, pro: `₮${proPrice.toLocaleString()}` },
             ].map((r, i) => (
-              <div key={i} className={`grid grid-cols-3 px-5 py-3 ${i % 2 === 0 ? "bg-white" : "bg-[rgba(0,0,0,0.01)]"} border-b border-[rgba(0,0,0,0.04)] last:border-0`}>
-                <p className="text-[0.84rem] text-[#3a3a3c]">{r.label}</p>
-                <p className={`text-[0.84rem] font-semibold text-center ${r.basic === "—" ? "text-[#aeaeb2]" : "text-[#3b82f6]"}`}>{r.basic}</p>
-                <p className={`text-[0.84rem] font-semibold text-center ${r.proOnly ? "text-[#9333ea]" : r.pro === "✓" ? "text-[#9333ea]" : "text-[#9333ea]"}`}>{r.pro}</p>
+              <div key={i} className={`grid grid-cols-4 px-4 py-3 ${i % 2 === 0 ? "bg-white" : "bg-[rgba(0,0,0,0.01)]"} border-b border-[rgba(0,0,0,0.04)] last:border-0`}>
+                <p className="text-[0.82rem] text-[#3a3a3c]">{r.label}</p>
+                <p className={`text-[0.82rem] font-semibold text-center ${r.basic === "—" ? "text-[#aeaeb2]" : "text-[#3b82f6]"}`}>{r.basic}</p>
+                <p className={`text-[0.82rem] font-semibold text-center ${r.std === "—" ? "text-[#aeaeb2]" : "text-[#6e6e73]"}`}>{r.std}</p>
+                <p className={`text-[0.82rem] font-semibold text-center ${r.pro === "—" ? "text-[#aeaeb2]" : "text-[#9333ea]"}`}>{r.pro}</p>
               </div>
             ))}
           </div>
 
-          <PricingSection basicPrice={basicPrice} proPrice={proPrice} />
+          <PricingSection basicPrice={basicPrice} standardPrice={standardPrice} proPrice={proPrice} />
 
   
         </section>

@@ -24,8 +24,8 @@ export interface PaymentStatus {
   amount: number;
 }
 
-/** Create a Basic or Pro subscription invoice */
-export const createSubscriptionInvoice = (plan: "basic" | "pro"): Promise<InvoiceResponse> =>
+/** Create a subscription invoice */
+export const createSubscriptionInvoice = (plan: "basic" | "standard" | "pro"): Promise<InvoiceResponse> =>
   http.post("/invoice", { feature: plan });
 
 /** Poll payment status */

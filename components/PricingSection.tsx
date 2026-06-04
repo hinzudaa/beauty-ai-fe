@@ -13,27 +13,33 @@ import {
   UpgradePrice,
 } from "@/apis/payment";
 
-type SubState  = "loading" | "no-auth" | "no-sub" | "basic" | "pro";
+type SubState  = "loading" | "no-auth" | "no-sub" | "basic" | "standard" | "pro";
 type PayState  = "idle" | "creating" | "waiting" | "success";
 
-interface Props { basicPrice: number; proPrice: number; }
+interface Props { basicPrice: number; standardPrice: number; proPrice: number; }
 
-const BASIC_FEATURES = [
-  "Сард 5 шинжилгээ",
-  "Бүрэн AI looksmax шинжилгээ",
-  "2 AI Look зураг (1 үс + 1 хувцас)",
-  "Өнгөний палет & зөвлөмж",
-  "Facebook-т хуваалцах",
-];
+const PLAN_FEATURES = {
+  basic: [
+    "Сард 5 шинжилгээ",
+    "Бүрэн AI looksmax шинжилгээ",
+    "2 AI Look зураг",
+    "Өнгөний палет & зөвлөмж",
+  ],
+  standard: [
+    "Сард 10 шинжилгээ",
+    "Бүрэн AI looksmax шинжилгээ",
+    "3 AI Look зураг",
+    "Өнгөний палет & зөвлөмж",
+  ],
+  pro: [
+    "Сард 20 шинжилгээ",
+    "5 AI Look зураг",
+    "AI Personal Stylist Chat",
+    "Бүх Basic боломжууд",
+  ],
+};
 
-const PRO_FEATURES = [
-  "Сард 20 шинжилгээ",
-  "5 AI Look зураг (2 үс + 2 хувцас + 1 casual)",
-  "AI Personal Stylist Chat",
-  "Бүх Basic боломжууд",
-];
-
-export default function PricingSection({ basicPrice, proPrice }: Props) {
+export default function PricingSection({ basicPrice, standardPrice, proPrice }: Props) {
   // Lazy init: skip "loading" entirely if no token
   const [subState,    setSubState]    = useState<SubState>(() =>
     tokenStore.get() ? "loading" : "no-auth"
@@ -41,7 +47,7 @@ export default function PricingSection({ basicPrice, proPrice }: Props) {
   const [upgradeInfo, setUpgradeInfo] = useState<UpgradePrice | null>(null);
   const [payState,     setPayState]     = useState<PayState>("idle");
   const [invoice,      setInvoice]      = useState<InvoiceResponse | null>(null);
-  const [activePlan,   setActivePlan]   = useState<"basic" | "pro" | null>(null);
+  const [activePlan,   setActivePlan]   = useState<"basic" | "standard" | "pro" | null>(null);
   const [payError,     setPayError]     = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -53,7 +59,7 @@ export default function PricingSection({ basicPrice, proPrice }: Props) {
       .then((p) => {
         const plan = p.subscription?.status === "active" ? p.subscription.plan : null;
         setSubState(plan ?? "no-sub");
-        if (plan === "basic") {
+        if (plan === "basic" || plan === "standard") {
           getUpgradePrice("pro").then(setUpgradeInfo).catch(() => {});
         }
       })
@@ -117,112 +123,117 @@ export default function PricingSection({ basicPrice, proPrice }: Props) {
   return (
     <div className="flex flex-col gap-5">
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-[18px] max-w-[820px] mx-auto w-full">
+      {/* 3-plan grid — Standard as decoy makes Pro look best value */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+        {([
+          { id: "basic"    as const, name: "Basic",    price: basicPrice,    color: "#3b82f6", dark: false },
+          { id: "standard" as const, name: "Standard", price: standardPrice, color: "#6e6e73", dark: false },
+          { id: "pro"      as const, name: "Pro",       price: proPrice,      color: "#9333ea", dark: true  },
+        ]).map((plan, idx) => {
+          const isCurrent = subState === plan.id;
+          const showUpgrade = upgradeInfo?.isUpgrade && plan.id === "pro" && (subState === "basic" || subState === "standard");
+          const disabled = payState !== "idle" && activePlan !== plan.id;
+          const creating = payState === "creating" && activePlan === plan.id;
 
-        {/* ── BASIC CARD ── */}
-        <div className="anim-fade-up pricing-card-basic rounded-[24px] flex flex-col gap-[22px] relative overflow-hidden"
-          style={{
-            animationDelay: "100ms",
-            background:     isBasic ? "rgba(59,130,246,0.04)" : "#fff",
-            border:         isBasic ? "1.5px solid rgba(59,130,246,0.3)" : "1px solid rgba(0,0,0,0.08)",
-            boxShadow:      "0 2px 16px rgba(0,0,0,0.05)",
-            padding:        "32px 28px",
-          }}>
-          <div>
-            <div className="flex items-start justify-between mb-[18px] gap-2">
-              <span className="text-[0.72rem] font-bold tracking-[0.1em] uppercase text-[#8e8e93]">Basic</span>
-              {isBasic && <span className="text-[0.6rem] font-bold text-[#3b82f6] bg-[rgba(59,130,246,0.1)] border border-[rgba(59,130,246,0.25)] rounded-full px-[10px] py-[3px]">Одоогийн багц ✓</span>}
-            </div>
-            <p className="text-[2.8rem] font-extrabold tracking-[-0.04em] leading-none mb-1 text-[#1c1c1e]">₮{basicPrice.toLocaleString()}</p>
-            <p className="text-[0.84rem] text-[#8e8e93]">/ сар</p>
-          </div>
-          <div className="h-px bg-[rgba(0,0,0,0.06)]" />
-          <ul className="list-none p-0 flex flex-col gap-[11px]">
-            {BASIC_FEATURES.map((f) => (
-              <li key={f} className="flex gap-[10px] text-[0.86rem] leading-[1.45] text-[#3a3a3c]">
-                <span className="shrink-0 font-bold text-[#3b82f6]">✓</span>{f}
-              </li>
-            ))}
-          </ul>
-          {isBasic ? (
-            <div className="mt-auto text-center py-[14px] rounded-full text-[0.9rem] font-bold text-[#3b82f6] bg-[rgba(59,130,246,0.07)] border border-[rgba(59,130,246,0.2)]">Basic идэвхтэй</div>
-          ) : isPro ? (
-            <div className="mt-auto text-center py-[14px] rounded-full text-[0.84rem] text-[#aeaeb2] border border-[rgba(0,0,0,0.08)]">Одоо Pro ашиглаж байна</div>
-          ) : (
-            <button onClick={() => handleSubscribe("basic")} disabled={payState !== "idle"}
-              className="mt-auto block w-full text-center rounded-full py-[14px] font-bold text-[0.9rem] transition-all cursor-pointer border-none"
-              style={{ background: "transparent", color: "#1c1c1e", border: "1.5px solid rgba(0,0,0,0.14)", opacity: payState !== "idle" && activePlan !== "basic" ? 0.5 : 1 }}>
-              {payState === "creating" && activePlan === "basic" ? "Үүсгэж байна..." : "Basic захиалах →"}
-            </button>
-          )}
-        </div>
-
-        {/* ── PRO CARD ── */}
-        <div className="anim-fade-up pricing-card-pro rounded-[24px] flex flex-col gap-[22px] relative overflow-hidden"
-          style={{
-            animationDelay: "200ms",
-            background:     "#1c1c1e",
-            border:         "none",
-            boxShadow:      isPro ? "0 0 0 2.5px #9333ea, 0 20px 60px rgba(28,28,30,0.22)" : "0 20px 60px rgba(28,28,30,0.22)",
-            padding:        "32px 28px",
-          }}>
-          <div className="absolute top-0 left-0 right-0 h-[3px]"
-            style={{ background: "linear-gradient(90deg,#9333ea,#c084fc,#7c3aed)", backgroundSize: "200%", animation: "gradient-x 3s ease infinite" }} />
-          <div className="absolute -top-[60px] -right-[60px] w-[200px] h-[200px] rounded-full pointer-events-none"
-            style={{ background: "radial-gradient(circle,rgba(147,51,234,0.15),transparent 70%)" }} />
-
-          <div>
-            <div className="flex items-start justify-between mb-[18px] gap-2">
-              <span className="text-[0.72rem] font-bold tracking-[0.1em] uppercase text-[rgba(255,255,255,0.45)]">Pro</span>
-              {isPro
-                ? <span className="text-[0.6rem] font-bold text-[#c084fc] bg-[rgba(192,132,252,0.15)] border border-[rgba(192,132,252,0.3)] rounded-full px-[10px] py-[3px]">Одоогийн багц ✓</span>
-                : <span className="text-[0.6rem] font-bold text-[#c084fc] bg-[rgba(192,132,252,0.12)] border border-[rgba(192,132,252,0.28)] rounded-full px-[10px] py-[3px] whitespace-nowrap">Хамгийн алдартай</span>}
-            </div>
-            {isBasic && upgradeInfo?.isUpgrade ? (
-              <div>
-                <div className="flex items-end gap-2 mb-1">
-                  <p className="text-[2.8rem] font-extrabold tracking-[-0.04em] leading-none text-white">₮{upgradeInfo.amount.toLocaleString()}</p>
-                  <p className="text-[1.1rem] line-through mb-1 text-[rgba(255,255,255,0.3)]">₮{proPrice.toLocaleString()}</p>
-                </div>
-                <p className="text-[0.72rem] font-semibold text-[#c084fc]">
-                  -{upgradeInfo.discount.toLocaleString()}₮ хасагдсан · {upgradeInfo.remainingDays} өдрийн үлдэгдэл
-                </p>
-              </div>
-            ) : (
-              <>
-                <p className="text-[2.8rem] font-extrabold tracking-[-0.04em] leading-none mb-1 text-white">₮{proPrice.toLocaleString()}</p>
-                <p className="text-[0.84rem] text-[rgba(255,255,255,0.38)]">/ сар</p>
-              </>
-            )}
-          </div>
-
-          <div className="h-px bg-[rgba(255,255,255,0.08)]" />
-          <ul className="list-none p-0 flex flex-col gap-[11px]">
-            {PRO_FEATURES.map((f) => (
-              <li key={f} className="flex gap-[10px] text-[0.86rem] leading-[1.45] text-[rgba(255,255,255,0.78)]">
-                <span className="shrink-0 font-bold text-[#c084fc]">✓</span>{f}
-              </li>
-            ))}
-          </ul>
-
-          {isPro ? (
-            <div className="mt-auto text-center py-[14px] rounded-full text-[0.9rem] font-bold text-[#c084fc] bg-[rgba(192,132,252,0.1)] border border-[rgba(192,132,252,0.2)]">Pro идэвхтэй</div>
-          ) : (
-            <button onClick={() => handleSubscribe("pro")} disabled={payState !== "idle"}
-              className="mt-auto block w-full text-center rounded-full py-[14px] font-bold text-[0.9rem] text-white transition-all cursor-pointer border-none"
+          return (
+            <div key={plan.id}
+              className={`anim-fade-up rounded-[24px] flex flex-col gap-5 relative overflow-hidden`}
               style={{
-                background: "linear-gradient(135deg,#9333ea,#7c3aed)",
-                boxShadow:  "0 4px 20px rgba(147,51,234,0.4)",
-                opacity:    payState !== "idle" && activePlan !== "pro" ? 0.5 : 1,
+                animationDelay: `${(idx + 1) * 100}ms`,
+                background:     plan.dark ? "#1c1c1e" : isCurrent ? `${plan.color}06` : "#fff",
+                border:         plan.dark ? "none" : isCurrent ? `1.5px solid ${plan.color}40` : "1px solid rgba(0,0,0,0.08)",
+                boxShadow:      plan.dark
+                  ? isCurrent ? `0 0 0 2.5px ${plan.color}, 0 20px 60px rgba(28,28,30,0.22)` : "0 20px 60px rgba(28,28,30,0.22)"
+                  : "0 2px 16px rgba(0,0,0,0.05)",
+                padding: "28px 24px",
               }}>
-              {payState === "creating" && activePlan === "pro"
-                ? "Үүсгэж байна..."
-                : isBasic
-                  ? `Upgrade хийх → ₮${(upgradeInfo?.amount ?? proPrice).toLocaleString()}`
-                  : "Pro захиалах →"}
-            </button>
-          )}
-        </div>
+
+              {/* Pro animated top bar */}
+              {plan.dark && (
+                <>
+                  <div className="absolute top-0 left-0 right-0 h-[3px]"
+                    style={{ background: "linear-gradient(90deg,#9333ea,#c084fc,#7c3aed)", backgroundSize: "200%", animation: "gradient-x 3s ease infinite" }} />
+                  <div className="absolute -top-[60px] -right-[60px] w-[180px] h-[180px] rounded-full pointer-events-none"
+                    style={{ background: "radial-gradient(circle,rgba(147,51,234,0.15),transparent 70%)" }} />
+                </>
+              )}
+
+              {/* Header */}
+              <div>
+                <div className="flex items-start justify-between mb-3 gap-2">
+                  <span className="text-[0.68rem] font-bold tracking-[0.1em] uppercase"
+                    style={{ color: plan.dark ? "rgba(255,255,255,0.45)" : "#8e8e93" }}>
+                    {plan.name}
+                  </span>
+                  {isCurrent && (
+                    <span className="text-[0.58rem] font-bold rounded-full px-[9px] py-[2px] whitespace-nowrap"
+                      style={{ color: plan.color, background: `${plan.color}18`, border: `1px solid ${plan.color}30` }}>
+                      Идэвхтэй ✓
+                    </span>
+                  )}
+                  {!isCurrent && plan.dark && (
+                    <span className="text-[0.58rem] font-bold text-[#c084fc] bg-[rgba(192,132,252,0.12)] border border-[rgba(192,132,252,0.28)] rounded-full px-[9px] py-[2px] whitespace-nowrap">
+                      Хамгийн сайн
+                    </span>
+                  )}
+                </div>
+
+                {showUpgrade ? (
+                  <div>
+                    <div className="flex items-end gap-2 mb-1">
+                      <p className="text-[2.4rem] font-extrabold tracking-[-0.04em] leading-none text-white">₮{upgradeInfo!.amount.toLocaleString()}</p>
+                      <p className="text-[1rem] line-through mb-0.5 text-[rgba(255,255,255,0.3)]">₮{plan.price.toLocaleString()}</p>
+                    </div>
+                    <p className="text-[0.68rem] font-semibold text-[#c084fc]">
+                      -{upgradeInfo!.discount.toLocaleString()}₮ хасагдсан
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-[2.4rem] font-extrabold tracking-[-0.04em] leading-none mb-1"
+                      style={{ color: plan.dark ? "#fff" : "#1c1c1e" }}>
+                      ₮{plan.price.toLocaleString()}
+                    </p>
+                    <p className="text-[0.82rem]" style={{ color: plan.dark ? "rgba(255,255,255,0.38)" : "#8e8e93" }}>/ сар</p>
+                  </>
+                )}
+              </div>
+
+              <div className="h-px" style={{ background: plan.dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }} />
+
+              <ul className="list-none p-0 flex flex-col gap-[10px] flex-1">
+                {PLAN_FEATURES[plan.id].map((f) => (
+                  <li key={f} className="flex gap-[8px] text-[0.83rem] leading-[1.45]"
+                    style={{ color: plan.dark ? "rgba(255,255,255,0.78)" : "#3a3a3c" }}>
+                    <span className="shrink-0 font-bold" style={{ color: plan.color }}>✓</span>{f}
+                  </li>
+                ))}
+              </ul>
+
+              {/* CTA */}
+              {isCurrent ? (
+                <div className="text-center py-[12px] rounded-full text-[0.87rem] font-bold"
+                  style={{ color: plan.color, background: `${plan.color}10`, border: `1px solid ${plan.color}25` }}>
+                  {plan.name} идэвхтэй
+                </div>
+              ) : (
+                <button onClick={() => handleSubscribe(plan.id)} disabled={disabled}
+                  className="block w-full text-center rounded-full py-[12px] font-bold text-[0.87rem] transition-all cursor-pointer border-none"
+                  style={{
+                    background: plan.dark ? "linear-gradient(135deg,#9333ea,#7c3aed)" : "transparent",
+                    color:      plan.dark ? "#fff" : "#1c1c1e",
+                    border:     plan.dark ? "none" : "1.5px solid rgba(0,0,0,0.14)",
+                    boxShadow:  plan.dark ? "0 4px 20px rgba(147,51,234,0.4)" : "none",
+                    opacity:    disabled ? 0.5 : 1,
+                  }}>
+                  {creating ? "Үүсгэж байна..."
+                    : showUpgrade ? `Upgrade → ₮${upgradeInfo!.amount.toLocaleString()}`
+                    : `${plan.name} захиалах →`}
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {payError && (
