@@ -7,7 +7,7 @@ const http = new HttpRequest(null, `${siteUrl}/analyze`);
 
 export interface LooksMaxAnalysis {
   faceShape:          string;
-  lookmaxScore:       number;         // 1–10
+  lookmaxScore:       number;
   features: {
     eyes:     string;
     jawline:  string;
@@ -15,12 +15,16 @@ export interface LooksMaxAnalysis {
     nose:     string;
     lips:     string;
   };
-  skinTone:           string;
-  strengths:          string[];
-  improvements:       string[];
+  skinTone:            string;
+  undertone?:          string;       // Warm / Cool / Neutral
+  seasonalColor?:      string;       // Spring / Summer / Autumn / Winter
+  hiddenStrengths?:    string[];     // Things others notice but you don't
+  strengths:           string[];
+  improvements:        string[];
+  makeupTips?:         string;       // Face-specific makeup advice
   hairRecommendations: string[];
-  outfitStyle:        string;
-  colorPalette:       string[];
+  outfitStyle:         string;
+  colorPalette:        string[];
 }
 
 export interface FullAnalysisResult {

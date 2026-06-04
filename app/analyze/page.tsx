@@ -587,6 +587,45 @@ export default function AnalyzePage() {
               )}
             </div>
 
+            {/* Undertone + Seasonal color — things users don't know about themselves */}
+            {(result.analysis.undertone || result.analysis.seasonalColor) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {result.analysis.undertone && (
+                  <div className="card p-5">
+                    <p className="label-style mb-2" style={{ color: "#d97706" }}>🌡 Арьсны далд тон</p>
+                    <p className="text-[1rem] font-bold text-[#1c1c1e] mb-1">{result.analysis.undertone}</p>
+                    <p className="text-[0.78rem] text-[#6e6e73] leading-[1.5]">
+                      Ихэнх хүн өөрийнхөө undertone-г мэддэггүй. Энэ нь хувцас, нүүр будалт, үс будалтын өнгийг сонгоход хамгийн чухал хүчин зүйл.
+                    </p>
+                  </div>
+                )}
+                {result.analysis.seasonalColor && (
+                  <div className="card p-5">
+                    <p className="label-style mb-2" style={{ color: "#059669" }}>🌸 Өнгөний улирал</p>
+                    <p className="text-[1rem] font-bold text-[#1c1c1e] mb-1">{result.analysis.seasonalColor}</p>
+                    <p className="text-[0.78rem] text-[#6e6e73] leading-[1.5]">
+                      Энэ улирлын өнгөнүүд таны арьс, нүд, үсний өнгөтэй хамгийн сайн нийцэж, нүүрийг гэрэлтүүлнэ.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Hidden strengths — what others notice but you don't */}
+            {result.analysis.hiddenStrengths && result.analysis.hiddenStrengths.length > 0 && (
+              <div className="card p-5"
+                style={{ background: "linear-gradient(135deg,rgba(147,51,234,0.04),rgba(167,139,250,0.02))", border: "1px solid rgba(147,51,234,0.15)" }}>
+                <p className="label-style text-[#9333ea] mb-3">✨ Бусад хүмүүс анзаардаг онцлогууд</p>
+                <ul className="flex flex-col gap-2 list-none p-0">
+                  {result.analysis.hiddenStrengths.map((s, i) => (
+                    <li key={i} className="flex gap-2 text-[0.86rem] text-[#3a3a3c] leading-[1.6]">
+                      <span className="text-[#9333ea] shrink-0">✦</span>{s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* Features breakdown */}
             <div className="card p-5">
               <p className="label-style mb-4">Нүүрний онцлог</p>
@@ -626,6 +665,14 @@ export default function AnalyzePage() {
                 </ul>
               </div>
             </div>
+
+            {/* Makeup tips */}
+            {result.analysis.makeupTips && (
+              <div className="card p-5">
+                <p className="label-style mb-2" style={{ color: "#ec4899" }}>💄 Нүүр будалтын зөвлөгөө</p>
+                <p className="text-[0.86rem] text-[#3a3a3c] leading-[1.65]">{result.analysis.makeupTips}</p>
+              </div>
+            )}
 
             {/* Hair & Style */}
             <div className="card p-5">
