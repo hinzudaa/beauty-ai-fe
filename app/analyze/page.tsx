@@ -169,23 +169,28 @@ export default function AnalyzePage() {
     try {
       const r = await runFullAnalysis(photoUrl, occasion);
       setResult(r); setActiveTab("hair"); setStep("result");
-      setGeneratedLooks([]); setGeneratingLooks(true);
 
-      // gpt-image-1: хэрэглэгчийн selfie → нүүр хэвээр, үс/хувцас өөрчлөгдөнө
-      generateLooks(
-        photoUrl,       // original selfie
-        r.analysisId,   // MongoDB id — looks will be saved back
-        {
-          faceShape:           r.analysis.faceShape,
-          skinTone:            r.analysis.skinTone,
-          hairRecommendations: r.analysis.hairRecommendations ?? [],
-          outfitStyle:         r.analysis.outfitStyle ?? "",
-        },
-        occasion
-      )
-        .then(({ looks }) => setGeneratedLooks(looks))
-        .catch(() => { /* images optional — analysis already shown */ })
-        .finally(() => setGeneratingLooks(false));
+      // gpt-image-1 look generation — Pro subscribers only
+      const isPro = profile?.subscription?.plan === "pro" &&
+                    profile?.subscription?.status === "active";
+
+      if (isPro) {
+        setGeneratedLooks([]); setGeneratingLooks(true);
+        generateLooks(
+          photoUrl,
+          r.analysisId,
+          {
+            faceShape:           r.analysis.faceShape,
+            skinTone:            r.analysis.skinTone,
+            hairRecommendations: r.analysis.hairRecommendations ?? [],
+            outfitStyle:         r.analysis.outfitStyle ?? "",
+          },
+          occasion
+        )
+          .then(({ looks }) => setGeneratedLooks(looks))
+          .catch(() => { /* images optional — analysis already shown */ })
+          .finally(() => setGeneratingLooks(false));
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Алдаа гарлаа";
       if (msg === "needsSubscription") { setStep("subscribe"); }
@@ -407,7 +412,7 @@ export default function AnalyzePage() {
                     {uploading ? "Зураг хуулж байна..." : photoUrl ? "Зураг бэлэн ✓" : "Зураг бэлэн"}
                   </p>
                   <p className="text-[0.78rem] text-[#8e8e93]">
-                    {uploading ? "Cloudflare R2-д хадгалж байна..." : "Нөхцлөө сонгоод шинжлэх товчийг дарна уу"}
+                    {uploading ? "Зураг оруулж байна..." : "Нөхцлөө сонгоод шинжлэх товчийг дарна уу"}
                   </p>
                 </div>
                 <button onClick={() => setStep("upload")} className="text-[0.75rem] text-[#aeaeb2] bg-transparent border-none cursor-pointer">Солих</button>
@@ -575,7 +580,24 @@ export default function AnalyzePage() {
               )}
             </div>
 
-            {/* DALL-E generated look images */}
+            {/* Pro-only upsell for Basic users */}
+            {profile?.subscription?.plan === "basic" && !generatingLooks && generatedLooks.length === 0 && (
+              <div className="card p-5 flex items-center gap-4"
+                style={{ background: "linear-gradient(135deg,rgba(147,51,234,0.05),rgba(124,58,237,0.03))", border: "1px solid rgba(147,51,234,0.2)" }}>
+                <span className="text-[2rem] shrink-0">⭐</span>
+                <div className="flex-1">
+                  <p className="text-[0.9rem] font-bold text-[#1c1c1e] mb-1">AI Look зураг — Pro захиалга</p>
+                  <p className="text-[0.8rem] text-[#6e6e73]">Pro захиалга авснаар таны selfie дээр тулгуурлан үс засалт, хувцасны look зурагнуудыг AI-аар үүсгэнэ.</p>
+                </div>
+                <a href="/analyze?plan=pro"
+                  className="shrink-0 text-[0.8rem] font-bold text-white px-4 py-2 rounded-full whitespace-nowrap"
+                  style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)" }}>
+                  Pro авах →
+                </a>
+              </div>
+            )}
+
+            {/* AI generated look images — Pro only */}
             {(generatingLooks || generatedLooks.length > 0) && (
               <div className="card p-5">
                 <div className="flex items-center justify-between mb-4">
@@ -585,7 +607,7 @@ export default function AnalyzePage() {
                       {[0,1,2].map((i) => (
                         <span key={i} className="animate-dot-blink w-[5px] h-[5px] rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.2}s` }} />
                       ))}
-                      <span className="text-[0.72rem] text-[#9333ea]">DALL-E үүсгэж байна...</span>
+                      <span className="text-[0.72rem] text-[#9333ea]">Зурагийг үүсгэж байна...</span>
                     </div>
                   )}
                 </div>
