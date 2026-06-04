@@ -14,12 +14,6 @@ const FEATURE: Record<string, { label: string; icon: string; color: string }> = 
   hairstyle: { label: "Үс засал & Грим",   icon: "✦", color: "#a855f7" },
 };
 
-const STATUS_COLOR: Record<string, { text: string; bg: string; border: string }> = {
-  paid:    { text: "#16a34a", bg: "rgba(22,163,74,0.08)",  border: "rgba(22,163,74,0.2)"  },
-  pending: { text: "#d97706", bg: "rgba(217,119,6,0.08)",  border: "rgba(217,119,6,0.2)"  },
-  failed:  { text: "#dc2626", bg: "rgba(220,38,38,0.08)",  border: "rgba(220,38,38,0.2)"  },
-};
-const STATUS_LABEL: Record<string, string> = { paid: "Төлсөн", pending: "Хүлээгдэж буй", failed: "Амжилтгүй" };
 
 const PLAN_COLOR: Record<string, string> = {
   basic: "text-[#3b82f6] bg-[rgba(59,130,246,0.08)] border-[rgba(59,130,246,0.2)]",
@@ -203,16 +197,15 @@ export default function ProfilePage() {
                 <div key={i} className="card h-16" style={{ animation: "pulse 1.5s infinite" }} />
               ))}
             </div>
-          ) : !data?.payments.length ? (
+          ) : !data?.payments.filter((p) => p.status === "paid").length ? (
             <div className="card p-10 text-center">
-              <p className="text-[0.9rem] text-[#8e8e93]">Одоогоор төлбөрийн түүх байхгүй байна.</p>
-              <p className="text-[0.82rem] text-[#aeaeb2] mt-[6px]">Шинжилгээ хийхэд л энд харагдана.</p>
+              <p className="text-[0.9rem] text-[#8e8e93]">Одоогоор төлөгдсөн төлбөр байхгүй байна.</p>
+              <p className="text-[0.82rem] text-[#aeaeb2] mt-[6px]">Захиалга хийхэд л энд харагдана.</p>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              {data.payments.map((p) => {
+              {data.payments.filter((p) => p.status === "paid").map((p) => {
                 const feat = FEATURE[p.type];
-                const sc   = STATUS_COLOR[p.status] ?? { text: "#8e8e93", bg: "rgba(0,0,0,0.04)", border: "rgba(0,0,0,0.08)" };
                 const typeLabel =
                   p.type === "basic" ? "Basic захиалга" :
                   p.type === "pro"   ? "Pro захиалга"   :
@@ -220,18 +213,19 @@ export default function ProfilePage() {
                 return (
                   <div key={p.invoiceId} className="card px-5 py-[14px] flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-base shrink-0" style={{ color: feat?.color ?? "#9333ea" }}>
+                      <span className="text-base shrink-0 text-[#16a34a]">
                         {p.type === "basic" || p.type === "pro" ? "★" : (feat?.icon ?? "◇")}
                       </span>
                       <div className="min-w-0">
                         <p className="text-[0.87rem] font-semibold text-[#1c1c1e] overflow-hidden text-ellipsis whitespace-nowrap">{typeLabel}</p>
-                        <p className="text-[0.75rem] text-[#8e8e93] mt-0.5">{fmt(p.createdAt)}</p>
+                        <p className="text-[0.75rem] text-[#8e8e93] mt-0.5">
+                          {p.paidAt ? fmt(p.paidAt) : fmt(p.createdAt)}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-[0.72rem] font-bold tracking-[0.04em] px-[10px] py-1 rounded-full border"
-                        style={{ color: sc.text, background: sc.bg, borderColor: sc.border }}>
-                        {STATUS_LABEL[p.status] ?? p.status}
+                      <span className="text-[0.72rem] font-bold text-[#16a34a] bg-[rgba(22,163,74,0.08)] border border-[rgba(22,163,74,0.2)] px-[10px] py-1 rounded-full">
+                        Төлсөн
                       </span>
                       <span className="text-[0.9rem] font-extrabold text-[#1c1c1e]">{p.amount.toLocaleString()}₮</span>
                     </div>
