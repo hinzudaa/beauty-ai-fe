@@ -19,6 +19,7 @@ export interface Subscription {
   monthlyUsage:   number;
   usageLimit:     number;
   usageRemaining: number;
+  usageResetAt?:  string;
 }
 
 export interface ProfileData {

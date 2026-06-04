@@ -17,7 +17,7 @@ import { appUrl } from "@/config/site";
  *   checking → (no sub) subscribe → payment → upload → occasion → analyzing → result
  *   checking → (has sub)                       upload → occasion → analyzing → result
  */
-type Step = "checking" | "subscribe" | "payment" | "upload" | "occasion" | "analyzing" | "result";
+type Step = "checking" | "subscribe" | "payment" | "upload" | "occasion" | "analyzing" | "result" | "limitReached";
 
 const OCCASIONS = [
   { id: "interview", label: "Ажлын ярилцлага", icon: "💼", sub: "Professional" },
@@ -96,8 +96,14 @@ export default function AnalyzePage() {
     getProfile()
       .then((p) => {
         setProfile(p);
-        if (p.subscription?.status === "active") {
-          setStep(preview && photoUrl ? "occasion" : "upload");
+        const sub = p.subscription;
+        if (sub?.status === "active") {
+          // Check if monthly limit is already reached
+          if (sub.monthlyUsage >= sub.usageLimit) {
+            setStep("limitReached");
+          } else {
+            setStep(preview && photoUrl ? "occasion" : "upload");
+          }
         } else {
           setStep("subscribe");
         }
@@ -206,7 +212,12 @@ export default function AnalyzePage() {
         .finally(() => setGeneratingLooks(false));
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Алдаа гарлаа";
-      if (msg === "needsSubscription") { setStep("subscribe"); }
+      if (msg === "needsSubscription")   { setStep("subscribe");    }
+      else if (msg === "usageLimitReached") {
+        // Refresh profile to get latest usage count, then show limit screen
+        getProfile().then(setProfile).catch(() => {});
+        setStep("limitReached");
+      }
       else { setError(msg); setStep("occasion"); }
     }
   }, [photoUrl, occasion]);
@@ -259,8 +270,9 @@ export default function AnalyzePage() {
             {step === "payment"   && "QPay төлбөр"}
             {step === "upload"    && "Selfie оруулна уу"}
             {step === "occasion"  && "Нөхцөл сонгох"}
-            {step === "analyzing" && "Шинжилж байна..."}
-            {step === "result"    && "Таны бүрэн дүн"}
+            {step === "analyzing"   && "Шинжилж байна..."}
+            {step === "result"      && "Таны бүрэн дүн"}
+            {step === "limitReached" && "Сарын хязгаарт хүрлээ"}
           </h1>
           {step === "subscribe" && (
             <p className="text-[0.9rem] text-[#6e6e73] mt-2">
@@ -517,6 +529,65 @@ export default function AnalyzePage() {
               }}>
               {uploading ? "Зураг хуулж байна..." : "Шинжлэх ✦"}
             </button>
+          </div>
+        )}
+
+        {/* ── LIMIT REACHED ── */}
+        {step === "limitReached" && (
+          <div className="max-w-[480px] mx-auto flex flex-col gap-5">
+            {/* Icon + message */}
+            <div className="card p-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-[rgba(239,68,68,0.08)] border-2 border-[rgba(239,68,68,0.15)] flex items-center justify-center mx-auto mb-4">
+                <span className="text-[2rem]">🚫</span>
+              </div>
+              <p className="text-[1.15rem] font-extrabold text-[#1c1c1e] mb-2">Сарын хязгаарт хүрлээ</p>
+              <p className="text-[0.88rem] text-[#6e6e73] leading-[1.6] mb-5">
+                Энэ сард боломжит шинжилгээний тоо дууслаа.<br />
+                Ирэх сарын эхэнд автоматаар шинэчлэгдэнэ.
+              </p>
+
+              {/* Usage bar */}
+              {profile?.subscription && (
+                <div className="bg-[#f5f5f7] rounded-2xl p-4 mb-5 text-left">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[0.78rem] font-semibold text-[#3a3a3c]">
+                      {profile.subscription.plan.toUpperCase()} багц
+                    </span>
+                    <span className="text-[0.78rem] font-bold text-[#ef4444]">
+                      {profile.subscription.monthlyUsage} / {profile.subscription.usageLimit} ашигласан
+                    </span>
+                  </div>
+                  <div className="h-2 bg-[rgba(0,0,0,0.08)] rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-[#ef4444]" style={{ width: "100%" }} />
+                  </div>
+                  {profile.subscription.usageResetAt && (
+                    <p className="text-[0.72rem] text-[#aeaeb2] mt-2">
+                      Шинэчлэгдэх: {new Date(profile.subscription.usageResetAt).toLocaleDateString("mn-MN", { year: "numeric", month: "long", day: "numeric" })}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Upgrade to Pro if on basic/standard */}
+              {profile?.subscription?.plan !== "pro" && (
+                <div className="rounded-2xl p-4 mb-4 text-left"
+                  style={{ background: "linear-gradient(135deg,rgba(147,51,234,0.06),rgba(124,58,237,0.03))", border: "1px solid rgba(147,51,234,0.15)" }}>
+                  <p className="text-[0.82rem] font-bold text-[#1c1c1e] mb-1">
+                    ⭐ Pro-д шилжиж сард 10 шинжилгээ авна уу
+                  </p>
+                  <p className="text-[0.75rem] text-[#6e6e73] mb-3">4 AI Look зураг + AI Стилист чат</p>
+                  <button onClick={() => { setSelectedPlan("pro"); setStep("subscribe"); }}
+                    className="w-full py-[11px] rounded-full font-bold text-[0.85rem] text-white border-none cursor-pointer"
+                    style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)", boxShadow: "0 4px 20px rgba(147,51,234,0.35)" }}>
+                    Pro-д upgrade хийх →
+                  </button>
+                </div>
+              )}
+
+              <p className="text-[0.78rem] text-[#aeaeb2]">
+                Сарын шинэчлэл хийгдсэний дараа дахин шинжилгээ хийх боломжтой.
+              </p>
+            </div>
           </div>
         )}
 
