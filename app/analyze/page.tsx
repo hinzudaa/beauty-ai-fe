@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { runFullAnalysis, FullAnalysisResult } from "@/apis/analyze";
+import { runFullAnalysis, generateLooks, FullAnalysisResult, GeneratedLook } from "@/apis/analyze";
 import { uploadSelfie } from "@/apis/upload";
 import { createSubscriptionInvoice, checkPayment, InvoiceResponse, QPayUrl } from "@/apis/payment";
 import { getProfile, ProfileData } from "@/apis/profile";
@@ -15,8 +15,7 @@ import { photoStore } from "@/utils/photoStore";
  *   checking → (no sub) subscribe → payment → upload → occasion → analyzing → result
  *   checking → (has sub)                       upload → occasion → analyzing → result
  */
-type Step      = "checking" | "subscribe" | "payment" | "upload" | "occasion" | "analyzing" | "result";
-type ResultTab = "face" | "hair" | "outfit";
+type Step = "checking" | "subscribe" | "payment" | "upload" | "occasion" | "analyzing" | "result";
 
 const OCCASIONS = [
   { id: "interview", label: "Ажлын ярилцлага", icon: "💼", sub: "Professional" },
@@ -67,10 +66,11 @@ export default function AnalyzePage() {
   const [error, setError]             = useState<string | null>(null);
   const [profile, setProfile]         = useState<ProfileData | null>(null);
   const [result, setResult]           = useState<FullAnalysisResult | null>(null);
-  const [activeTab, setActiveTab]     = useState<ResultTab>("face");
-  const [hairTab, setHairTab]         = useState<"hair" | "makeup">("hair");
+  const [activeTab, setActiveTab]     = useState<"hair" | "outfit">("hair");
   const [prices, setPrices]           = useState({ basic: 19999, pro: 29999 });
   const [notLoggedIn, setNotLoggedIn] = useState(false);
+  const [generatedLooks, setGeneratedLooks] = useState<GeneratedLook[]>([]);
+  const [generatingLooks, setGeneratingLooks] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   /* ── On mount: check auth → subscription → route to correct first step ── */
@@ -158,7 +158,7 @@ export default function AnalyzePage() {
     setTimeout(() => { cancelled = true; clearInterval(timer); }, 10 * 60 * 1000);
   }
 
-  /* ── Run AI analysis using the R2 CDN URL ── */
+  /* ── GPT-4o looksmaxxing analysis, then DALL-E look images in background ── */
   const runAll = useCallback(async () => {
     if (!photoUrl) {
       setError("Зураг хуулж дуусаагүй байна, хүлээнэ үү..."); return;
@@ -166,7 +166,30 @@ export default function AnalyzePage() {
     setStep("analyzing"); setError(null);
     try {
       const r = await runFullAnalysis(photoUrl, occasion);
-      setResult(r); setActiveTab("face"); setStep("result");
+      setResult(r); setActiveTab("hair"); setStep("result");
+      setGeneratedLooks([]); setGeneratingLooks(true);
+
+      // Build DALL-E prompts from hair + outfit recommendations
+      const hairItems = (r.analysis.hairRecommendations ?? []).map((h) => ({
+        name:   h,
+        prompt: `Professional beauty portrait of a young Asian woman with ${h} hairstyle. Studio lighting, clean background, high quality, realistic photo.`,
+      }));
+      const outfitItem = r.analysis.outfitStyle
+        ? [{
+            name:   "Recommended Style",
+            prompt: `Full body professional fashion photo of a young Asian woman wearing ${r.analysis.outfitStyle}. Studio lighting, clean background, high quality.`,
+          }]
+        : [];
+
+      const items = [...hairItems, ...outfitItem].slice(0, 4);
+      if (items.length > 0) {
+        generateLooks(photoUrl, items)
+          .then(({ looks }) => setGeneratedLooks(looks))
+          .catch(() => { /* images optional — analysis already shown */ })
+          .finally(() => setGeneratingLooks(false));
+      } else {
+        setGeneratingLooks(false);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Алдаа гарлаа";
       if (msg === "needsSubscription") { setStep("subscribe"); }
@@ -176,6 +199,7 @@ export default function AnalyzePage() {
 
   function resetToUpload() {
     setPreview(null); setPhotoUrl(null); setResult(null); setError(null);
+    setGeneratedLooks([]); setGeneratingLooks(false);
     setStep("upload");
   }
 
@@ -454,140 +478,138 @@ export default function AnalyzePage() {
         {step === "result" && result && (
           <div className="anim-fade-up flex flex-col gap-5">
 
-            {/* Tab switcher */}
-            <div className="flex gap-2 flex-wrap">
-              {([
-                { id: "face"   as ResultTab, label: "◈ Нүүрний шинжилгээ" },
-                { id: "hair"   as ResultTab, label: "✦ Үс & Грим"          },
-                { id: "outfit" as ResultTab, label: "◉ Хувцаслалт"         },
-              ] as const).map((t) => (
-                <button key={t.id} onClick={() => setActiveTab(t.id)}
-                  className="px-5 py-[9px] rounded-full border text-[0.87rem] font-semibold cursor-pointer transition-all"
+            {/* Score card */}
+            <div className="card p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="label-style mb-1">Looksmax оноо</p>
+                  <div className="flex items-end gap-2">
+                    <span className="text-[3rem] font-extrabold text-[#1c1c1e] leading-none tracking-[-0.04em]">
+                      {result.analysis.lookmaxScore}
+                    </span>
+                    <span className="text-[#aeaeb2] text-[1rem] mb-1">/10</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="label-style mb-1">Нүүрний хэлбэр</p>
+                  <p className="text-[1rem] font-bold text-[#1c1c1e]">{result.analysis.faceShape}</p>
+                  <p className="text-[0.8rem] text-[#8e8e93] mt-0.5">{result.analysis.skinTone}</p>
+                </div>
+              </div>
+              {/* Score bar */}
+              <div className="h-2 bg-[rgba(0,0,0,0.06)] rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-700"
                   style={{
-                    background:  activeTab === t.id ? "#1c1c1e" : "#fff",
-                    color:       activeTab === t.id ? "#fff" : "#6e6e73",
-                    borderColor: activeTab === t.id ? "#1c1c1e" : "rgba(0,0,0,0.1)",
-                  }}>
-                  {t.label}
-                </button>
-              ))}
+                    width: `${(result.analysis.lookmaxScore / 10) * 100}%`,
+                    background: result.analysis.lookmaxScore >= 8
+                      ? "linear-gradient(90deg,#16a34a,#22c55e)"
+                      : result.analysis.lookmaxScore >= 6
+                      ? "linear-gradient(90deg,#9333ea,#a855f7)"
+                      : "linear-gradient(90deg,#d97706,#f59e0b)",
+                  }} />
+              </div>
+              {/* Color palette */}
+              {result.analysis.colorPalette?.length > 0 && (
+                <div className="flex gap-2 mt-4 flex-wrap">
+                  {result.analysis.colorPalette.map((c) => (
+                    <div key={c} className="flex flex-col items-center gap-1">
+                      <div className="w-9 h-9 rounded-xl border border-[rgba(0,0,0,0.08)]" style={{ background: c }} />
+                      <span className="text-[0.55rem] text-[#aeaeb2]">{c}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Face */}
-            {activeTab === "face" && (
-              <div className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {[
-                    { label: "Нүүрний хэлбэр", value: result.face.faceShape },
-                    { label: "Арьсны тон",      value: result.face.skinTone  },
-                    { label: "Style type",       value: result.face.styleType },
-                  ].map((s) => (
-                    <div key={s.label} className="card p-[18px_14px] text-center">
-                      <p className="label-style mb-2">{s.label}</p>
-                      <p className="text-[0.9rem] font-bold text-[#1c1c1e] leading-[1.35]">{s.value}</p>
+            {/* Features breakdown */}
+            <div className="card p-5">
+              <p className="label-style mb-4">Нүүрний онцлог</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {Object.entries(result.analysis.features ?? {}).map(([key, val]) => {
+                  const LABELS: Record<string, string> = { eyes: "Нүд", jawline: "Эрүү", chin: "Эрүүний доор", nose: "Хамар", lips: "Уруул" };
+                  return (
+                    <div key={key} className="bg-[#f9f9fb] rounded-xl p-3 border border-[rgba(0,0,0,0.05)]">
+                      <p className="label-style mb-1" style={{ color: "#9333ea" }}>{LABELS[key] ?? key}</p>
+                      <p className="text-[0.82rem] text-[#3a3a3c] leading-[1.5]">{String(val)}</p>
                     </div>
-                  ))}
-                </div>
-                <div className="card p-[22px]">
-                  <p className="label-style mb-[14px]">Өнгөний палет</p>
-                  <div className="flex gap-3 flex-wrap">
-                    {result.face.colorPalette.map((c) => (
-                      <div key={c} className="flex flex-col items-center gap-[6px]">
-                        <div className="w-11 h-11 rounded-[14px] border border-[rgba(0,0,0,0.08)] shadow-[0_2px_8px_rgba(0,0,0,0.1)]" style={{ background: c }} />
-                        <span className="text-[0.62rem] text-[#8e8e93]">{c}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="card p-[22px]">
-                  <p className="label-style mb-[14px]">AI зөвлөмж</p>
-                  <ul className="flex flex-col gap-3 list-none p-0">
-                    {result.face.recommendations.map((r, i) => (
-                      <li key={i} className="flex gap-3 text-[0.88rem] text-[#3a3a3c] leading-[1.65]">
-                        <span className="text-[#9333ea] shrink-0">—</span>{r}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                  );
+                })}
               </div>
-            )}
+            </div>
 
-            {/* Hair */}
-            {activeTab === "hair" && (
-              <div className="flex flex-col gap-4">
-                <div className="card flex items-center gap-4 p-[18px]">
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-[rgba(168,85,247,0.08)] border border-[rgba(168,85,247,0.15)] shrink-0">
-                    <span className="text-[#a855f7]">◈</span>
-                  </div>
-                  <div>
-                    <p className="label-style">Нүүрний хэлбэр</p>
-                    <p className="text-base font-bold text-[#1c1c1e] mt-1">{result.hair.faceShape} нүүр</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  {(["hair","makeup"] as const).map((t) => (
-                    <button key={t} onClick={() => setHairTab(t)}
-                      className="text-[0.87rem] font-semibold px-5 py-[9px] rounded-full border cursor-pointer transition-all"
-                      style={{
-                        background:  hairTab === t ? "#1c1c1e" : "#fff",
-                        color:       hairTab === t ? "#fff" : "#6e6e73",
-                        borderColor: hairTab === t ? "#1c1c1e" : "rgba(0,0,0,0.1)",
-                      }}>
-                      {t === "hair" ? "Үс засал" : "Грим"}
-                    </button>
+            {/* Strengths & Improvements */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="card p-5">
+                <p className="label-style text-[#16a34a] mb-3">✓ Давуу тал</p>
+                <ul className="flex flex-col gap-2 list-none p-0">
+                  {(result.analysis.strengths ?? []).map((s, i) => (
+                    <li key={i} className="flex gap-2 text-[0.84rem] text-[#3a3a3c] leading-[1.5]">
+                      <span className="text-[#16a34a] shrink-0 font-bold">+</span>{s}
+                    </li>
                   ))}
-                </div>
-                {hairTab === "hair" && result.hair.hair.map((h) => (
-                  <div key={h.name} className="card p-[18px]">
-                    <div className="flex items-start justify-between mb-[10px]">
-                      <h3 className="text-[0.98rem] font-bold text-[#1c1c1e]">{h.name}</h3>
-                      <span className="text-[0.68rem] font-semibold text-[#8e8e93] px-[10px] py-1 rounded-full bg-[#f5f5f7] border border-[rgba(0,0,0,0.06)] shrink-0 ml-3">{h.length}</span>
-                    </div>
-                    <p className="text-[0.87rem] text-[#6e6e73] leading-[1.65]">{h.desc}</p>
-                  </div>
-                ))}
-                {hairTab === "makeup" && result.hair.makeup.map((m) => (
-                  <div key={m.name} className="card p-[18px]">
-                    <div className="flex items-center justify-between mb-[10px]">
-                      <h3 className="text-[0.98rem] font-bold text-[#1c1c1e]">{m.name}</h3>
-                      <div className="flex gap-[6px]">
-                        {m.colors.map((c) => <div key={c} className="w-[22px] h-[22px] rounded-full border border-[rgba(0,0,0,0.1)]" style={{ background: c }} />)}
-                      </div>
-                    </div>
-                    <p className="text-[0.87rem] text-[#6e6e73] leading-[1.65]">{m.desc}</p>
-                  </div>
+                </ul>
+              </div>
+              <div className="card p-5">
+                <p className="label-style text-[#9333ea] mb-3">↑ Looksmax зөвлөмж</p>
+                <ul className="flex flex-col gap-2 list-none p-0">
+                  {(result.analysis.improvements ?? []).map((s, i) => (
+                    <li key={i} className="flex gap-2 text-[0.84rem] text-[#3a3a3c] leading-[1.5]">
+                      <span className="text-[#9333ea] shrink-0 font-bold">→</span>{s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Hair & Style */}
+            <div className="card p-5">
+              <p className="label-style mb-3">Үс засал & Хувцаслалт</p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {(result.analysis.hairRecommendations ?? []).map((h) => (
+                  <span key={h} className="text-[0.82rem] font-semibold text-[#9333ea] bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] rounded-full px-3 py-1">
+                    ✦ {h}
+                  </span>
                 ))}
               </div>
-            )}
+              {result.analysis.outfitStyle && (
+                <p className="text-[0.84rem] text-[#6e6e73] leading-[1.6]">
+                  <span className="font-semibold text-[#1c1c1e]">Стиль зөвлөмж: </span>
+                  {result.analysis.outfitStyle}
+                </p>
+              )}
+            </div>
 
-            {/* Outfit */}
-            {activeTab === "outfit" && (
-              <div className="flex flex-col gap-4">
-                {result.outfits.map((outfit, i) => (
-                  <div key={i} className="card p-[22px]">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <p className="label-style mb-[6px]">Хослол {i + 1}</p>
-                        <h3 className="text-[1.05rem] font-extrabold text-[#1c1c1e] tracking-[-0.01em]">{outfit.name}</h3>
-                      </div>
-                      <div className="flex gap-[6px] mt-1">
-                        {outfit.colors.map((c) => <div key={c} className="w-[22px] h-[22px] rounded-full border border-[rgba(0,0,0,0.1)]" style={{ background: c }} />)}
-                      </div>
-                    </div>
-                    <ul className="flex flex-col gap-2 mb-[14px] list-none p-0">
-                      {outfit.items.map((item) => (
-                        <li key={item} className="flex gap-3 text-[0.87rem] text-[#3a3a3c] leading-[1.55]">
-                          <span className="text-[#9333ea] shrink-0">—</span>{item}
-                        </li>
+            {/* DALL-E generated look images */}
+            {(generatingLooks || generatedLooks.length > 0) && (
+              <div className="card p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="label-style">AI үүсгэсэн look-ууд</p>
+                  {generatingLooks && (
+                    <div className="flex items-center gap-2">
+                      {[0,1,2].map((i) => (
+                        <span key={i} className="animate-dot-blink w-[5px] h-[5px] rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.2}s` }} />
                       ))}
-                    </ul>
-                    <div className="rounded-xl p-[14px] bg-[#f5f5f7] border border-[rgba(0,0,0,0.05)]">
-                      <p className="text-[0.82rem] text-[#6e6e73] leading-[1.7]">
-                        <span className="text-[#8e8e93]">Зөвлөмж — </span>{outfit.tip}
-                      </p>
+                      <span className="text-[0.72rem] text-[#9333ea]">DALL-E үүсгэж байна...</span>
                     </div>
-                  </div>
-                ))}
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {generatedLooks.map((look) => (
+                    <div key={look.name} className="relative rounded-xl overflow-hidden aspect-square bg-[#f5f5f7]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={look.imageUrl} alt={look.name} className="w-full h-full object-cover" />
+                      <div className="absolute bottom-0 left-0 right-0 px-2 pb-[6px] pt-[14px]"
+                        style={{ background: "linear-gradient(to top,rgba(0,0,0,0.7),transparent)" }}>
+                        <p className="text-[0.62rem] font-bold text-white text-center">{look.name}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {generatingLooks && generatedLooks.length === 0 && (
+                    [...Array(4)].map((_, i) => (
+                      <div key={i} className="rounded-xl bg-[rgba(147,51,234,0.06)] aspect-square animate-pulse border border-[rgba(147,51,234,0.1)]" />
+                    ))
+                  )}
+                </div>
               </div>
             )}
 

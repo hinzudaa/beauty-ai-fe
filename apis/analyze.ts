@@ -3,46 +3,55 @@ import { HttpRequest } from "@/utils/request";
 
 const http = new HttpRequest(null, `${siteUrl}/analyze`);
 
-/* ── Result types ────────────────────────────────────────────────── */
+/* ── Types ───────────────────────────────────────────────────────── */
 
-export interface AnalyzeResult {
-  faceShape:       string;
-  skinTone:        string;
-  styleType:       string;
-  recommendations: string[];
-  colorPalette:    string[];
-}
-
-export interface HairItem   { name: string; length: string; desc: string; }
-export interface MakeupItem { name: string; desc: string; colors: string[]; }
-export interface HairstyleResult {
-  faceShape: string;
-  hair:      HairItem[];
-  makeup:    MakeupItem[];
-}
-
-export interface OutfitItem {
-  name:   string;
-  items:  string[];
-  colors: string[];
-  tip:    string;
+export interface LooksMaxAnalysis {
+  faceShape:          string;
+  lookmaxScore:       number;         // 1–10
+  features: {
+    eyes:     string;
+    jawline:  string;
+    chin:     string;
+    nose:     string;
+    lips:     string;
+  };
+  skinTone:           string;
+  strengths:          string[];
+  improvements:       string[];
+  hairRecommendations: string[];
+  outfitStyle:        string;
+  colorPalette:       string[];
 }
 
 export interface FullAnalysisResult {
-  face:    AnalyzeResult;
-  hair:    HairstyleResult;
-  outfits: OutfitItem[];
+  analysis: LooksMaxAnalysis;
+  occasion: string;
+}
+
+export interface GeneratedLook {
+  name:     string;
+  imageUrl: string;
 }
 
 /* ── API calls ───────────────────────────────────────────────────── */
 
 /**
- * Run face + hairstyle + outfit analysis in one call — counts as 1 subscription use.
- * @param photoUrl  Public Cloudflare R2 CDN URL (returned by uploadSelfie)
- * @param event     Occasion, e.g. "casual", "interview"
+ * GPT-4o Vision analyzes the selfie with a looksmaxxing prompt.
+ * Returns in ~5s. Follow up with generateLooks() for DALL-E images.
  */
 export function runFullAnalysis(photoUrl: string, event: string): Promise<FullAnalysisResult> {
   return http.post("/full", { url: photoUrl, event });
+}
+
+/**
+ * DALL-E 3 generates look inspiration images.
+ * Called after runFullAnalysis — images load progressively.
+ */
+export function generateLooks(
+  photoUrl: string,
+  items: Array<{ name: string; prompt: string }>
+): Promise<{ looks: GeneratedLook[] }> {
+  return http.post("/generate-looks", { photoUrl, items });
 }
 
 export function fileToDataUrl(file: File): Promise<string> {
