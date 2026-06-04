@@ -216,7 +216,7 @@ export default async function Home() {
               <div className="anim-scale-in delay-500 relative rounded-[18px] overflow-hidden bg-[#111122] shrink-0 w-[min(220px,100%)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/image/original.jpg"
+                  src="/image/original2.jpg"
                   alt="Face scan"
                   className="w-full object-cover block opacity-85"
                   style={{ aspectRatio: "3/4" }}
