@@ -171,7 +171,8 @@ export default function AnalyzePage() {
 
       // gpt-image-1: хэрэглэгчийн selfie → нүүр хэвээр, үс/хувцас өөрчлөгдөнө
       generateLooks(
-        photoUrl,                            // ← original selfie
+        photoUrl,       // original selfie
+        r.analysisId,   // MongoDB id — looks will be saved back
         {
           faceShape:           r.analysis.faceShape,
           skinTone:            r.analysis.skinTone,

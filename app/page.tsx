@@ -20,7 +20,7 @@ function HairCard({ label, isFirst, src, delay = "0ms" }: {
 }) {
   return (
     <div
-      className="anim-scale-in relative rounded-[14px] overflow-hidden bg-[#1a1a2e] flex-1 min-w-0"
+      className="anim-scale-in relative rounded-[14px] overflow-hidden bg-[#1a1a2e] flex-1 min-w-[80px] md:min-w-0"
       style={{ animationDelay: delay }}
     >
       <div className="aspect-[3/4]">
@@ -209,17 +209,16 @@ export default async function Home() {
               <span className="text-[0.7rem] font-semibold text-[rgba(255,255,255,0.25)] tracking-[0.08em] uppercase">Demo preview</span>
             </div>
 
-            {/* Showcase content */}
-            <div className="p-[24px_28px_28px] flex gap-5 items-stretch flex-wrap">
+            {/* Showcase content — stacks on mobile, side-by-side on md+ */}
+            <div className="p-4 md:p-[24px_28px_28px] flex flex-col md:flex-row gap-4 md:gap-5 items-stretch">
 
-              {/* Left — face scan */}
-              <div className="anim-scale-in delay-500 relative rounded-[18px] overflow-hidden bg-[#111122] shrink-0 w-[min(220px,100%)]">
+              {/* Left — face scan: full width on mobile, fixed 180px on md+ */}
+              <div className="anim-scale-in delay-500 relative rounded-[18px] overflow-hidden bg-[#111122] w-full md:w-[180px] md:shrink-0 lg:w-[220px]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src="https://res.cloudinary.com/dvbjtnaks/image/upload/v1780543684/original2_hpoiae.jpg"
                   alt="Face scan"
-                  className="w-full object-cover block opacity-85"
-                  style={{ aspectRatio: "3/4" }}
+                  className="w-full object-cover block opacity-85 aspect-[4/3] md:aspect-[3/4]"
                 />
 
                 {/* Scan overlay */}
@@ -268,7 +267,8 @@ export default async function Home() {
                   </span>
                 </div>
 
-                <div className="flex gap-[9px] overflow-hidden">
+                {/* Horizontally scrollable on mobile, flex-wrap on desktop */}
+                <div className="flex gap-[9px] overflow-x-auto pb-1 md:overflow-hidden md:flex-nowrap">
                   <HairCard label="Short bob" isFirst delay="500ms" src="https://res.cloudinary.com/dvbjtnaks/image/upload/v1780543684/shortbob_dwmyht.jpg" />
                   <HairCard label="Wavy lob"  delay="580ms"        src="https://res.cloudinary.com/dvbjtnaks/image/upload/v1780543688/wavylob_hssboa.jpg"  />
                   <HairCard label="Updo"      delay="660ms"        src="https://res.cloudinary.com/dvbjtnaks/image/upload/v1780543686/updo_mfnbp7.jpg"     />

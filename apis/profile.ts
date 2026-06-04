@@ -34,3 +34,32 @@ export interface ProfileData {
 }
 
 export const getProfile = (): Promise<ProfileData> => http.get("/");
+
+export interface SavedAnalysis {
+  id:        string;
+  photoUrl:  string;
+  analysis:  {
+    faceShape:    string;
+    lookmaxScore: number;
+    skinTone:     string;
+    strengths:    string[];
+    improvements: string[];
+    hairRecommendations: string[];
+    outfitStyle:  string;
+    colorPalette: string[];
+    features:     Record<string, string>;
+  };
+  looks:     Array<{ name: string; imageUrl: string }>;
+  occasion:  string;
+  createdAt: string;
+}
+
+export interface AnalysesPage {
+  data:  SavedAnalysis[];
+  total: number;
+  page:  number;
+  pages: number;
+}
+
+export const getAnalyses = (page = 1): Promise<AnalysesPage> =>
+  http.get("/analyses", { page });

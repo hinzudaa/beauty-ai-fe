@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { useAuth } from "@/lib/AuthContext";
-import { getProfile, ProfileData } from "@/apis/profile";
+import { useState } from "react";
+import { getProfile, getAnalyses, ProfileData, SavedAnalysis } from "@/apis/profile";
 
 const FEATURE: Record<string, { label: string; icon: string; color: string }> = {
   full:      { label: "Бүрэн шинжилгээ",   icon: "✦", color: "#9333ea" },
@@ -54,6 +55,15 @@ export default function ProfilePage() {
       </div>
     );
   }
+
+  // Analyses history
+  const [analysisPage, setAnalysisPage] = useState(1);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const { data: analysesData, isLoading: analysesLoading } = useSWR(
+    user ? `analyses-${analysisPage}` : null,
+    () => getAnalyses(analysisPage),
+    { revalidateOnFocus: false }
+  );
 
   const sub        = data?.subscription;
   const totalSpend = data?.payments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0) ?? 0;
@@ -237,6 +247,157 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      {/* ── Шинжилгээний түүх ─────────────────────────── */}
+      <section className="mt-10">
+        <div className="flex items-center justify-between mb-5">
+          <p className="label-style">Шинжилгээний түүх</p>
+          {(analysesData?.total ?? 0) > 0 && (
+            <span className="text-[0.75rem] text-[#8e8e93]">Нийт {analysesData?.total} шинжилгээ</span>
+          )}
+        </div>
+
+        {analysesLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="card h-[200px] animate-pulse" />
+            ))}
+          </div>
+        ) : !analysesData?.data.length ? (
+          <div className="card p-10 text-center">
+            <p className="text-[0.9rem] text-[#8e8e93]">Одоогоор шинжилгээ хийгдээгүй байна.</p>
+            <a href="/analyze"
+              className="inline-block mt-4 py-[10px] px-6 rounded-full text-[0.85rem] font-bold text-white"
+              style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)" }}>
+              Шинжилгээ хийх →
+            </a>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {analysesData.data.map((a: SavedAnalysis) => (
+                <div key={a.id} className="card overflow-hidden flex flex-col">
+
+                  {/* Selfie + score */}
+                  <div className="relative aspect-[4/3] bg-[#f5f5f7]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={a.photoUrl} alt="selfie" className="w-full h-full object-cover" />
+                    <div className="absolute top-2 right-2 bg-[#1c1c1e] text-white text-[0.7rem] font-extrabold px-2 py-1 rounded-lg">
+                      {a.analysis.lookmaxScore}/10
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 px-3 pb-2 pt-6"
+                      style={{ background: "linear-gradient(to top,rgba(0,0,0,0.65),transparent)" }}>
+                      <p className="text-[0.65rem] font-bold text-white">{a.analysis.faceShape} · {new Date(a.createdAt).toLocaleDateString("mn-MN")}</p>
+                    </div>
+                  </div>
+
+                  {/* Generated look thumbnails */}
+                  {a.looks.length > 0 && (
+                    <div className="flex gap-1 p-2">
+                      {a.looks.slice(0, 4).map((l) => (
+                        <div key={l.name} className="flex-1 aspect-square rounded-lg overflow-hidden bg-[#f5f5f7]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={l.imageUrl} alt={l.name} className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Expand / collapse */}
+                  <button
+                    onClick={() => setExpanded(expanded === a.id ? null : a.id)}
+                    className="mx-4 mb-3 mt-1 py-[9px] rounded-full text-[0.8rem] font-semibold border border-[rgba(0,0,0,0.1)] text-[#6e6e73] cursor-pointer bg-transparent transition-all"
+                  >
+                    {expanded === a.id ? "Хаах ↑" : "Дэлгэрэнгүй харах ↓"}
+                  </button>
+
+                  {/* Expanded analysis detail */}
+                  {expanded === a.id && (
+                    <div className="px-4 pb-4 flex flex-col gap-3 border-t border-[rgba(0,0,0,0.06)] pt-3">
+
+                      {/* Score bar */}
+                      <div>
+                        <div className="flex justify-between text-[0.78rem] mb-1">
+                          <span className="text-[#6e6e73]">Looksmax оноо</span>
+                          <span className="font-bold text-[#1c1c1e]">{a.analysis.lookmaxScore}/10</span>
+                        </div>
+                        <div className="h-1.5 bg-[rgba(0,0,0,0.06)] rounded-full overflow-hidden">
+                          <div className="h-full rounded-full"
+                            style={{
+                              width: `${(a.analysis.lookmaxScore / 10) * 100}%`,
+                              background: a.analysis.lookmaxScore >= 8 ? "#16a34a" : a.analysis.lookmaxScore >= 6 ? "#9333ea" : "#d97706",
+                            }} />
+                        </div>
+                      </div>
+
+                      {/* Strengths */}
+                      <div>
+                        <p className="label-style text-[#16a34a] mb-2">✓ Давуу тал</p>
+                        {a.analysis.strengths.map((s, i) => (
+                          <p key={i} className="text-[0.8rem] text-[#3a3a3c] mb-1">+ {s}</p>
+                        ))}
+                      </div>
+
+                      {/* Improvements */}
+                      <div>
+                        <p className="label-style text-[#9333ea] mb-2">↑ Зөвлөмж</p>
+                        {a.analysis.improvements.map((s, i) => (
+                          <p key={i} className="text-[0.8rem] text-[#3a3a3c] mb-1">→ {s}</p>
+                        ))}
+                      </div>
+
+                      {/* Color palette */}
+                      {a.analysis.colorPalette?.length > 0 && (
+                        <div className="flex gap-2">
+                          {a.analysis.colorPalette.map((c) => (
+                            <div key={c} className="w-7 h-7 rounded-lg border border-[rgba(0,0,0,0.08)]" style={{ background: c }} />
+                          ))}
+                        </div>
+                      )}
+
+                      {/* All generated looks */}
+                      {a.looks.length > 0 && (
+                        <div>
+                          <p className="label-style mb-2">AI Look-ууд</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {a.looks.map((l) => (
+                              <div key={l.name} className="relative rounded-xl overflow-hidden aspect-square">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={l.imageUrl} alt={l.name} className="w-full h-full object-cover" />
+                                <div className="absolute bottom-0 left-0 right-0 px-2 pb-[5px] pt-[10px]"
+                                  style={{ background: "linear-gradient(to top,rgba(0,0,0,0.65),transparent)" }}>
+                                  <p className="text-[0.58rem] font-bold text-white text-center">{l.name}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {(analysesData?.pages ?? 0) > 1 && (
+              <div className="flex justify-center gap-3 mt-6">
+                <button disabled={analysisPage <= 1}
+                  onClick={() => setAnalysisPage((p) => p - 1)}
+                  className="px-4 py-2 rounded-full border border-[rgba(0,0,0,0.1)] text-[0.82rem] text-[#6e6e73] cursor-pointer disabled:opacity-30">
+                  ← Өмнөх
+                </button>
+                <span className="flex items-center text-[0.82rem] text-[#8e8e93]">{analysisPage} / {analysesData?.pages}</span>
+                <button disabled={analysisPage >= (analysesData?.pages ?? 1)}
+                  onClick={() => setAnalysisPage((p) => p + 1)}
+                  className="px-4 py-2 rounded-full border border-[rgba(0,0,0,0.1)] text-[0.82rem] text-[#6e6e73] cursor-pointer disabled:opacity-30">
+                  Дараах →
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </section>
     </div>
   );
 }

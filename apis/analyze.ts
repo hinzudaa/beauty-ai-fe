@@ -24,8 +24,9 @@ export interface LooksMaxAnalysis {
 }
 
 export interface FullAnalysisResult {
-  analysis: LooksMaxAnalysis;
-  occasion: string;
+  analysis:   LooksMaxAnalysis;
+  occasion:   string;
+  analysisId: string;   // MongoDB _id — used to save looks back + view history
 }
 
 export interface GeneratedLook {
@@ -52,11 +53,12 @@ export function runFullAnalysis(photoUrl: string, event: string): Promise<FullAn
  * @param occasion  Selected occasion for outfit prompt
  */
 export function generateLooks(
-  imageUrl: string,
-  analysis: Pick<LooksMaxAnalysis, "faceShape" | "skinTone" | "hairRecommendations" | "outfitStyle">,
-  occasion: string
+  imageUrl:   string,
+  analysisId: string,
+  analysis:   Pick<LooksMaxAnalysis, "faceShape" | "skinTone" | "hairRecommendations" | "outfitStyle">,
+  occasion:   string
 ): Promise<{ looks: GeneratedLook[] }> {
-  return http.post("/generate-looks", { imageUrl, analysis, occasion });
+  return http.post("/generate-looks", { imageUrl, analysisId, analysis, occasion });
 }
 
 export function fileToDataUrl(file: File): Promise<string> {
