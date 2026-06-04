@@ -1,5 +1,6 @@
 import Link from "next/link";
 import UploadHero from "@/components/UploadHero";
+import PricingSection from "@/components/PricingSection";
 import { getPrices } from "@/apis/prices";
 
 function ScanDot({ x, y, delay = "0s" }: { x: string; y: string; delay?: string }) {
@@ -312,7 +313,7 @@ export default async function Home() {
         {/* ══ PRICING ══════════════════════════════════════ */}
         <section className="max-w-[1200px] mx-auto px-5 md:px-12 lg:px-20 pb-20">
 
-          <div className="anim-fade-up delay-0 text-center mb-12">
+          <div className="anim-fade-up delay-0 text-center mb-10">
             <p className="label-style mb-[14px]">Үнийн санал</p>
             <h2 className="text-[clamp(1.9rem,4vw,2.8rem)] tracking-[-0.03em] leading-[1.1] mb-4">
               Хэрэгцээндээ тохирсон<br />багцаа сонгоорой
@@ -322,36 +323,32 @@ export default async function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-[18px] max-w-[820px] mx-auto">
-            <PricingCard
-              name="Basic" price={basicPrice.toLocaleString()} tag="/ сар"
-              href="/analyze?plan=basic" cta="Basic захиалах →" animDelay="100ms"
-              features={[
-                "Сард 20 шинжилгээ",
-                "Нүүр · Үс & Грим · Хувцас — нэг дор",
-                "Бүрэн AI нүүрний шинжилгээ",
-                "Үс засал & грим зөвлөмж",
-                "Хувцас хослол санал болгох",
-                "Өнгөний палет & персональ зөвлөмж",
-              ]}
-            />
-            <PricingCard
-              name="Pro" price={proPrice.toLocaleString()} tag="/ сар"
-              href="/analyze?plan=pro" cta="Pro захиалах →" highlight animDelay="200ms"
-              features={[
-                "Сард 40 шинжилгээ",
-                "AI Personal Stylist Chat",
-                "Бүх Basic боломжууд",
-                "Хамгийн өндөр нарийвчлал",
-              ]}
-            />
+          {/* Comparison table */}
+          <div className="anim-fade-up delay-100 max-w-[820px] mx-auto mb-8 overflow-hidden rounded-[18px] border border-[rgba(0,0,0,0.07)] shadow-[0_2px_16px_rgba(0,0,0,0.05)]">
+            <div className="grid grid-cols-3 bg-[rgba(0,0,0,0.03)] px-5 py-3 border-b border-[rgba(0,0,0,0.06)]">
+              <p className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-[#8e8e93]">Боломж</p>
+              <p className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-[#3b82f6] text-center">Basic</p>
+              <p className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-[#9333ea] text-center">Pro</p>
+            </div>
+            {[
+              { label: "Looksmaxxing шинжилгээ",   basic: "✓", pro: "✓" },
+              { label: "Оноо (1–10), нүүрний онцлог", basic: "✓", pro: "✓" },
+              { label: "Үс засал & хувцасны зөвлөмж", basic: "✓", pro: "✓" },
+              { label: "AI Look зурагнууд (gpt-image-1)", basic: "—", pro: "✓", proOnly: true },
+              { label: "AI Personal Stylist Chat",  basic: "—", pro: "✓", proOnly: true },
+              { label: "Сарын шинжилгээний тоо",   basic: "20", pro: "40" },
+            ].map((r, i) => (
+              <div key={i} className={`grid grid-cols-3 px-5 py-3 ${i % 2 === 0 ? "bg-white" : "bg-[rgba(0,0,0,0.01)]"} border-b border-[rgba(0,0,0,0.04)] last:border-0`}>
+                <p className="text-[0.84rem] text-[#3a3a3c]">{r.label}</p>
+                <p className={`text-[0.84rem] font-semibold text-center ${r.basic === "—" ? "text-[#aeaeb2]" : "text-[#3b82f6]"}`}>{r.basic}</p>
+                <p className={`text-[0.84rem] font-semibold text-center ${r.proOnly ? "text-[#9333ea]" : r.pro === "✓" ? "text-[#9333ea]" : "text-[#9333ea]"}`}>{r.pro}</p>
+              </div>
+            ))}
           </div>
 
-          <div className="anim-fade-in delay-500 text-center mt-7">
-            <p className="text-[0.82rem] text-[#aeaeb2]">
-              Нэвтэрч орсны дараа · Дурдсан үед цуцлах боломжтой
-            </p>
-          </div>
+          <PricingSection basicPrice={basicPrice} proPrice={proPrice} />
+
+  
         </section>
 
         {/* ══ FOOTER STATS ════════════════════════════════ */}

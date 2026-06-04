@@ -31,3 +31,15 @@ export const createSubscriptionInvoice = (plan: "basic" | "pro"): Promise<Invoic
 /** Poll payment status */
 export const checkPayment = (invoiceId: string): Promise<PaymentStatus> =>
   http.get(`/check/${encodeURIComponent(invoiceId)}`);
+
+export interface UpgradePrice {
+  amount:       number;   // discounted price to pay
+  discount:     number;   // amount deducted (remaining plan value)
+  fullPrice:    number;   // original plan price
+  remainingDays: number;
+  isUpgrade:    boolean;
+}
+
+/** Get pro-rated upgrade price for a plan */
+export const getUpgradePrice = (plan: "basic" | "pro"): Promise<UpgradePrice> =>
+  http.get(`/upgrade-price`, { plan });

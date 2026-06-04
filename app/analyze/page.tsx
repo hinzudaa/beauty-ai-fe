@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { runFullAnalysis, generateLooks, FullAnalysisResult, GeneratedLook } from "@/apis/analyze";
 import { uploadSelfie } from "@/apis/upload";
-import { createSubscriptionInvoice, checkPayment, InvoiceResponse, QPayUrl } from "@/apis/payment";
+import { createSubscriptionInvoice, checkPayment, getUpgradePrice, InvoiceResponse, QPayUrl, UpgradePrice } from "@/apis/payment";
 import { getProfile, ProfileData } from "@/apis/profile";
 import { getPrices } from "@/apis/prices";
 import { tokenStore } from "@/utils/request";
@@ -79,8 +79,9 @@ export default function AnalyzePage() {
   const [result, setResult]       = useState<FullAnalysisResult | null>(null);
   const [activeTab, setActiveTab] = useState<"hair" | "outfit">("hair");
   const [prices, setPrices]       = useState({ basic: 19999, pro: 29999 });
-  const [generatedLooks, setGeneratedLooks] = useState<GeneratedLook[]>([]);
+  const [generatedLooks, setGeneratedLooks]   = useState<GeneratedLook[]>([]);
   const [generatingLooks, setGeneratingLooks] = useState(false);
+  const [upgradeInfo, setUpgradeInfo]         = useState<UpgradePrice | null>(null);
   const router   = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -105,6 +106,14 @@ export default function AnalyzePage() {
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Fetch upgrade price whenever a plan is selected (and user is logged in)
+  useEffect(() => {
+    if (!selectedPlan || !tokenStore.get() || notLoggedIn) { setUpgradeInfo(null); return; }
+    getUpgradePrice(selectedPlan)
+      .then(setUpgradeInfo)
+      .catch(() => setUpgradeInfo(null));
+  }, [selectedPlan, notLoggedIn]);
 
   /* ── File select: show preview immediately, upload to R2 in background ── */
   async function handleFile(file: File) {
@@ -288,14 +297,36 @@ export default function AnalyzePage() {
                     )}
                   </div>
 
-                  <p className="text-[2rem] font-extrabold leading-none mb-1"
-                    style={{ color: plan.highlight && selectedPlan === plan.id ? "#fff" : "#1c1c1e" }}>
-                    ₮{(plan.id === "basic" ? prices.basic : prices.pro).toLocaleString()}
-                  </p>
-                  <p className="text-[0.78rem] mb-4"
-                    style={{ color: plan.highlight && selectedPlan === plan.id ? "rgba(255,255,255,0.4)" : "#8e8e93" }}>
-                    / сар · {plan.limit} шинжилгээ
-                  </p>
+                  {/* Price — show discounted price if upgrading */}
+                  {selectedPlan === plan.id && upgradeInfo?.isUpgrade ? (
+                    <div className="mb-4">
+                      <div className="flex items-end gap-2">
+                        <p className="text-[2rem] font-extrabold leading-none"
+                          style={{ color: plan.highlight ? "#fff" : "#1c1c1e" }}>
+                          ₮{upgradeInfo.amount.toLocaleString()}
+                        </p>
+                        <p className="text-[1rem] line-through mb-1"
+                          style={{ color: plan.highlight ? "rgba(255,255,255,0.3)" : "#aeaeb2" }}>
+                          ₮{upgradeInfo.fullPrice.toLocaleString()}
+                        </p>
+                      </div>
+                      <p className="text-[0.72rem] font-semibold mt-1"
+                        style={{ color: plan.highlight ? "#c084fc" : "#9333ea" }}>
+                        -{upgradeInfo.discount.toLocaleString()}₮ хасагдсан ({upgradeInfo.remainingDays} өдрийн үлдэгдэл)
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-[2rem] font-extrabold leading-none mb-1"
+                        style={{ color: plan.highlight && selectedPlan === plan.id ? "#fff" : "#1c1c1e" }}>
+                        ₮{(plan.id === "basic" ? prices.basic : prices.pro).toLocaleString()}
+                      </p>
+                      <p className="text-[0.78rem] mb-4"
+                        style={{ color: plan.highlight && selectedPlan === plan.id ? "rgba(255,255,255,0.4)" : "#8e8e93" }}>
+                        / сар · {plan.limit} шинжилгээ
+                      </p>
+                    </>
+                  )}
 
                   <ul className="space-y-2">
                     {plan.features.map((f) => (
@@ -324,13 +355,11 @@ export default function AnalyzePage() {
               {notLoggedIn
                 ? "Нэвтэрч захиалах →"
                 : selectedPlan
-                  ? `${selectedPlan === "pro" ? "Pro" : "Basic"} захиалах — ₮${(selectedPlan === "basic" ? prices.basic : prices.pro).toLocaleString()} →`
+                  ? upgradeInfo?.isUpgrade
+                    ? `Upgrade хийх — ₮${upgradeInfo.amount.toLocaleString()} →`
+                    : `${selectedPlan === "pro" ? "Pro" : "Basic"} захиалах — ₮${(selectedPlan === "basic" ? prices.basic : prices.pro).toLocaleString()} →`
                   : "Багц сонгоно уу"}
             </button>
-
-            <p className="text-center text-[0.78rem] text-[#aeaeb2]">
-              Нэвтэрч орсны дараа · QPay-ээр төлнө · Дурдсан үед цуцлах боломжтой
-            </p>
           </div>
         )}
 
@@ -342,9 +371,17 @@ export default function AnalyzePage() {
               <p className="text-[2.2rem] font-extrabold text-[#1c1c1e] mb-1 tracking-[-0.02em]">
                 {invoice.amount.toLocaleString()}₮
               </p>
-              <p className="text-[0.85rem] text-[#8e8e93] mb-6">
+              <p className="text-[0.85rem] text-[#8e8e93] mb-2">
                 {selectedPlan === "pro" ? "Pro · сард 40 шинжилгээ + AI Стилист" : "Basic · сард 20 шинжилгээ"}
               </p>
+              {upgradeInfo?.isUpgrade && (
+                <div className="inline-flex items-center gap-2 bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] rounded-full px-4 py-1.5 mb-6">
+                  <span className="text-[0.72rem] font-bold text-[#9333ea]">
+                    Upgrade хөнгөлөлт: -{upgradeInfo.discount.toLocaleString()}₮
+                  </span>
+                  <span className="text-[0.65rem] text-[#8e8e93]">({upgradeInfo.remainingDays} өдрийн үлдэгдэл)</span>
+                </div>
+              )}
 
               {invoice.qrImage && (
                 <div className="flex justify-center mb-6">
