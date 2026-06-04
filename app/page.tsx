@@ -227,10 +227,15 @@ export default async function Home() {
                   <div className="scan-line" />
                   <div className="absolute top-[43%] left-[8%] right-[8%] h-px bg-[rgba(100,220,255,0.35)]" />
                   <div className="absolute left-1/2 top-[12%] bottom-[12%] w-px bg-[rgba(100,220,255,0.35)] -translate-x-1/2" />
-                  {[["9%","11%"],["81%","11%"],["9%","81%"],["81%","81%"]].map(([l,t],i) => (
+                  {([
+                    { l:"9%",  t:"11%", h:"top-0 left-0",       v:"top-0 left-0"       }, // ┌ top-left
+                    { l:"81%", t:"11%", h:"top-0 left-[-11px]",  v:"top-0 left-0"       }, // ┐ top-right
+                    { l:"9%",  t:"81%", h:"top-0 left-0",        v:"top-[-11px] left-0" }, // └ bottom-left
+                    { l:"81%", t:"81%", h:"top-0 left-[-11px]",  v:"top-[-11px] left-0" }, // ┘ bottom-right
+                  ] as const).map(({ l, t, h, v }, i) => (
                     <div key={i} className="absolute" style={{ left: l, top: t }}>
-                      <div className="absolute top-0 left-0 w-[11px] h-[2px] bg-[#64dcff]" />
-                      <div className="absolute top-0 left-0 w-[2px] h-[11px] bg-[#64dcff]" />
+                      <div className={`absolute w-[11px] h-[2px] bg-[#64dcff] ${h}`} />
+                      <div className={`absolute w-[2px] h-[11px] bg-[#64dcff] ${v}`} />
                     </div>
                   ))}
                   <ScanDot x="50%" y="28%" delay="0s" />
