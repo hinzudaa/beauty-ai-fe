@@ -109,12 +109,16 @@ export default function AnalyzePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch upgrade price whenever a plan is selected (and user is logged in)
+  // Fetch upgrade price when a plan is selected and user is authenticated
+  // Note: when selectedPlan is null or user is not logged in, upgradeInfo stays null
+  // (set to null by lazy initializer — no synchronous setState in effect)
   useEffect(() => {
-    if (!selectedPlan || !tokenStore.get() || notLoggedIn) { setUpgradeInfo(null); return; }
+    if (!selectedPlan || notLoggedIn || !tokenStore.get()) return;
+    let cancelled = false;
     getUpgradePrice(selectedPlan)
-      .then(setUpgradeInfo)
-      .catch(() => setUpgradeInfo(null));
+      .then((p) => { if (!cancelled) setUpgradeInfo(p); })
+      .catch(() => { if (!cancelled) setUpgradeInfo(null); });
+    return () => { cancelled = true; };
   }, [selectedPlan, notLoggedIn]);
 
   /* ── File select: show preview immediately, upload to R2 in background ── */

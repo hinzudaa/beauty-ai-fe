@@ -35,8 +35,11 @@ const PRO_FEATURES = [
 ];
 
 export default function PricingSection({ basicPrice, proPrice }: Props) {
-  const [subState,     setSubState]     = useState<SubState>("loading");
-  const [upgradeInfo,  setUpgradeInfo]  = useState<UpgradePrice | null>(null);
+  // Lazy init: skip "loading" entirely if no token
+  const [subState,    setSubState]    = useState<SubState>(() =>
+    tokenStore.get() ? "loading" : "no-auth"
+  );
+  const [upgradeInfo, setUpgradeInfo] = useState<UpgradePrice | null>(null);
   const [payState,     setPayState]     = useState<PayState>("idle");
   const [invoice,      setInvoice]      = useState<InvoiceResponse | null>(null);
   const [activePlan,   setActivePlan]   = useState<"basic" | "pro" | null>(null);
@@ -45,7 +48,8 @@ export default function PricingSection({ basicPrice, proPrice }: Props) {
 
   // Check current subscription
   useEffect(() => {
-    if (!tokenStore.get()) { setSubState("no-auth"); return; }
+    // No token → already "no-auth" via lazy init; skip async call
+    if (!tokenStore.get()) return;
     getProfile()
       .then((p) => {
         const plan = p.subscription?.status === "active" ? p.subscription.plan : null;
