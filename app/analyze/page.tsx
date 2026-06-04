@@ -199,6 +199,7 @@ export default function AnalyzePage() {
             skinTone:            r.analysis.skinTone,
             hairRecommendations: r.analysis.hairRecommendations ?? [],
             outfitStyle:         r.analysis.outfitStyle ?? "",
+            colorPalette:        r.analysis.colorPalette ?? [],
           },
           occasion
         )
