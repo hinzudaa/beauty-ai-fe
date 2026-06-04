@@ -216,7 +216,7 @@ export default async function Home() {
               <div className="anim-scale-in delay-500 relative rounded-[18px] overflow-hidden bg-[#111122] shrink-0 w-[min(220px,100%)]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/image/original2.jpg"
+                  src="https://res.cloudinary.com/dvbjtnaks/image/upload/v1780543684/original2_hpoiae.jpg"
                   alt="Face scan"
                   className="w-full object-cover block opacity-85"
                   style={{ aspectRatio: "3/4" }}
@@ -269,11 +269,11 @@ export default async function Home() {
                 </div>
 
                 <div className="flex gap-[9px] overflow-hidden">
-                  <HairCard label="Short bob" isFirst delay="500ms" src="/image/shortbob.jpg" />
-                  <HairCard label="Wavy lob"  delay="580ms"        src="/image/wavylob.jpg"  />
-                  <HairCard label="Updo"      delay="660ms"        src="/image/updo.jpg"     />
-                  <HairCard label="Straight"  delay="740ms"        src="/image/straight.jpg" />
-                  <HairCard label="Braided"   delay="820ms"        src="/image/braided.jpg"  />
+                  <HairCard label="Short bob" isFirst delay="500ms" src="https://res.cloudinary.com/dvbjtnaks/image/upload/v1780543684/shortbob_dwmyht.jpg" />
+                  <HairCard label="Wavy lob"  delay="580ms"        src="https://res.cloudinary.com/dvbjtnaks/image/upload/v1780543688/wavylob_hssboa.jpg"  />
+                  <HairCard label="Updo"      delay="660ms"        src="https://res.cloudinary.com/dvbjtnaks/image/upload/v1780543686/updo_mfnbp7.jpg"     />
+                  <HairCard label="Straight"  delay="740ms"        src="https://res.cloudinary.com/dvbjtnaks/image/upload/v1780543685/straight_nofrmt.jpg" />
+                  <HairCard label="Braided"   delay="820ms"        src="https://res.cloudinary.com/dvbjtnaks/image/upload/v1780543685/braided_yf0lre.jpg"  />
                 </div>
 
                 <div className="anim-fade-in delay-700 flex flex-wrap gap-[7px]">

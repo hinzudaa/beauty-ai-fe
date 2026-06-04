@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { runFullAnalysis, fileToDataUrl, FullAnalysisResult } from "@/apis/analyze";
+import { runFullAnalysis, FullAnalysisResult } from "@/apis/analyze";
+import { uploadSelfie } from "@/apis/upload";
 import { createSubscriptionInvoice, checkPayment, InvoiceResponse, QPayUrl } from "@/apis/payment";
 import { getProfile, ProfileData } from "@/apis/profile";
 import { getPrices } from "@/apis/prices";
@@ -58,7 +59,8 @@ const PLAN_META = [
 export default function AnalyzePage() {
   const [step, setStep]               = useState<Step>("checking");
   const [preview, setPreview]         = useState<string | null>(() => photoStore.get()?.preview ?? null);
-  const [dataUrl, setDataUrl]         = useState<string | null>(() => photoStore.get()?.dataUrl ?? null);
+  const [photoUrl, setPhotoUrl]       = useState<string | null>(null);   // Cloudflare R2 CDN URL
+  const [uploading, setUploading]     = useState(false);
   const [occasion, setOccasion]       = useState("interview");
   const [selectedPlan, setSelectedPlan] = useState<"basic" | "pro" | null>(null);
   const [invoice, setInvoice]         = useState<InvoiceResponse | null>(null);
@@ -88,7 +90,7 @@ export default function AnalyzePage() {
         setProfile(p);
         if (p.subscription?.status === "active") {
           // Already subscribed → skip to upload
-          setStep(preview ? "occasion" : "upload");
+          setStep(preview && photoUrl ? "occasion" : "upload");
         } else {
           setStep("subscribe");
         }
@@ -102,13 +104,23 @@ export default function AnalyzePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* ── File upload ── */
+  /* ── File select: show preview immediately, upload to R2 in background ── */
   async function handleFile(file: File) {
-    const obj = URL.createObjectURL(file);
-    const du  = await fileToDataUrl(file);
-    setPreview(obj); setDataUrl(du);
+    setPreview(URL.createObjectURL(file));
+    setPhotoUrl(null);
     setError(null); setResult(null);
+    setUploading(true);
     setStep("occasion");
+
+    try {
+      const { url } = await uploadSelfie(file);
+      setPhotoUrl(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Зураг хуулахад алдаа гарлаа");
+      setStep("upload");
+    } finally {
+      setUploading(false);
+    }
   }
 
   /* ── Subscribe → QPay ── */
@@ -146,22 +158,24 @@ export default function AnalyzePage() {
     setTimeout(() => { cancelled = true; clearInterval(timer); }, 10 * 60 * 1000);
   }
 
-  /* ── Run AI analysis ── */
+  /* ── Run AI analysis using the R2 CDN URL ── */
   const runAll = useCallback(async () => {
-    if (!dataUrl) return;
+    if (!photoUrl) {
+      setError("Зураг хуулж дуусаагүй байна, хүлээнэ үү..."); return;
+    }
     setStep("analyzing"); setError(null);
     try {
-      const r = await runFullAnalysis(dataUrl, occasion);
+      const r = await runFullAnalysis(photoUrl, occasion);
       setResult(r); setActiveTab("face"); setStep("result");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Алдаа гарлаа";
       if (msg === "needsSubscription") { setStep("subscribe"); }
       else { setError(msg); setStep("occasion"); }
     }
-  }, [dataUrl, occasion]);
+  }, [photoUrl, occasion]);
 
   function resetToUpload() {
-    setPreview(null); setDataUrl(null); setResult(null); setError(null);
+    setPreview(null); setPhotoUrl(null); setResult(null); setError(null);
     setStep("upload");
   }
 
@@ -369,8 +383,12 @@ export default function AnalyzePage() {
               <div className="card flex items-center gap-4 p-4">
                 <Image src={preview} alt="preview" width={56} height={56} className="object-cover rounded-xl border border-[rgba(0,0,0,0.08)]" />
                 <div className="flex-1">
-                  <p className="text-[0.9rem] font-bold text-[#1c1c1e]">Зураг бэлэн</p>
-                  <p className="text-[0.78rem] text-[#8e8e93]">Нөхцлөө сонгоод шинжлэх товчийг дарна уу</p>
+                  <p className="text-[0.9rem] font-bold text-[#1c1c1e]">
+                    {uploading ? "Зураг хуулж байна..." : photoUrl ? "Зураг бэлэн ✓" : "Зураг бэлэн"}
+                  </p>
+                  <p className="text-[0.78rem] text-[#8e8e93]">
+                    {uploading ? "Cloudflare R2-д хадгалж байна..." : "Нөхцлөө сонгоод шинжлэх товчийг дарна уу"}
+                  </p>
                 </div>
                 <button onClick={() => setStep("upload")} className="text-[0.75rem] text-[#aeaeb2] bg-transparent border-none cursor-pointer">Солих</button>
               </div>
@@ -398,10 +416,15 @@ export default function AnalyzePage() {
               <p className="text-[0.8rem] text-[#ef4444] bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.15)] rounded-xl px-4 py-[10px]">{error}</p>
             )}
 
-            <button onClick={runAll}
-              className="w-full py-[14px] border-none rounded-full font-bold text-[0.9rem] text-white cursor-pointer"
-              style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)", boxShadow: "0 4px 20px rgba(147,51,234,0.35)" }}>
-              Шинжлэх ✦
+            <button onClick={runAll} disabled={uploading || !photoUrl}
+              className="w-full py-[14px] border-none rounded-full font-bold text-[0.9rem] text-white transition-all"
+              style={{
+                background:  uploading || !photoUrl ? "rgba(0,0,0,0.1)" : "linear-gradient(135deg,#9333ea,#7c3aed)",
+                boxShadow:   uploading || !photoUrl ? "none" : "0 4px 20px rgba(147,51,234,0.35)",
+                color:       uploading || !photoUrl ? "#aeaeb2" : "#fff",
+                cursor:      uploading || !photoUrl ? "not-allowed" : "pointer",
+              }}>
+              {uploading ? "Зураг хуулж байна..." : "Шинжлэх ✦"}
             </button>
           </div>
         )}

@@ -36,9 +36,13 @@ export interface FullAnalysisResult {
 
 /* ── API calls ───────────────────────────────────────────────────── */
 
-/** Run face + hairstyle + outfit in one call — counts as 1 subscription use */
-export function runFullAnalysis(imageDataUrl: string, event: string): Promise<FullAnalysisResult> {
-  return http.post("/full", { image: imageDataUrl, event });
+/**
+ * Run face + hairstyle + outfit analysis in one call — counts as 1 subscription use.
+ * @param photoUrl  Public Cloudflare R2 CDN URL (returned by uploadSelfie)
+ * @param event     Occasion, e.g. "casual", "interview"
+ */
+export function runFullAnalysis(photoUrl: string, event: string): Promise<FullAnalysisResult> {
+  return http.post("/full", { url: photoUrl, event });
 }
 
 export function fileToDataUrl(file: File): Promise<string> {
