@@ -331,12 +331,12 @@ export default async function Home() {
               <p className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-[#9333ea] text-center">Pro</p>
             </div>
             {[
-              { label: "Looksmaxxing шинжилгээ",   basic: "✓", pro: "✓" },
-              { label: "Оноо (1–10), нүүрний онцлог", basic: "✓", pro: "✓" },
-              { label: "Үс засал & хувцасны зөвлөмж", basic: "✓", pro: "✓" },
-              { label: "AI Look зурагнууд (gpt-image-1)", basic: "—", pro: "✓", proOnly: true },
-              { label: "AI Personal Stylist Chat",  basic: "—", pro: "✓", proOnly: true },
-              { label: "Сарын шинжилгээний тоо",   basic: "20", pro: "40" },
+              { label: "Looksmaxxing шинжилгээ",     basic: "✓",  pro: "✓"  },
+              { label: "Оноо (1–10), нүүрний онцлог", basic: "✓",  pro: "✓"  },
+              { label: "Үс засал & хувцасны зөвлөмж", basic: "✓",  pro: "✓"  },
+              { label: "AI Look зурагнуудs (InstantID)", basic: "2",  pro: "5",  proOnly: true },
+              { label: "AI Personal Stylist Chat",    basic: "—",  pro: "✓",  proOnly: true },
+              { label: "Сарын шинжилгээний тоо",     basic: "5",  pro: "20" },
             ].map((r, i) => (
               <div key={i} className={`grid grid-cols-3 px-5 py-3 ${i % 2 === 0 ? "bg-white" : "bg-[rgba(0,0,0,0.01)]"} border-b border-[rgba(0,0,0,0.04)] last:border-0`}>
                 <p className="text-[0.84rem] text-[#3a3a3c]">{r.label}</p>

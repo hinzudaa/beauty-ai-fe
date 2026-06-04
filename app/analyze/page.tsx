@@ -32,25 +32,25 @@ const PLAN_META = [
   {
     id:       "basic" as const,
     name:     "Basic",
-    limit:    20,
+    limit:    5,
     features: [
-      "Сард 20 шинжилгээ",
-      "Нүүр · Үс & Грим · Хувцас — нэг дор",
-      "Бүрэн AI дүн шинжилгээ",
+      "Сард 5 шинжилгээ",
+      "Бүрэн AI looksmax шинжилгээ",
+      "2 AI Look зураг (1 үс + 1 хувцас)",
       "Өнгөний палет & зөвлөмж",
-      "Хувцас хослол санал болгох",
+      "Facebook-т хуваалцах",
     ],
     color: "#3b82f6",
   },
   {
     id:        "pro" as const,
     name:      "Pro",
-    limit:     40,
+    limit:     20,
     features:  [
-      "Сард 40 шинжилгээ",
+      "Сард 20 шинжилгээ",
+      "5 AI Look зураг (2 үс + 2 хувцас + 1 casual)",
       "AI Personal Stylist Chat",
       "Бүх Basic боломжууд",
-      "Хамгийн өндөр нарийвчлал",
     ],
     color:     "#9333ea",
     highlight: true,
@@ -186,28 +186,23 @@ export default function AnalyzePage() {
       const r = await runFullAnalysis(photoUrl, occasion);
       setResult(r); setActiveTab("hair"); setStep("result");
 
-      // gpt-image-1 look generation — Pro subscribers only
-      const isPro = profile?.subscription?.plan === "pro" &&
-                    profile?.subscription?.status === "active";
-
-      if (isPro) {
-        setGeneratedLooks([]); setGeneratingLooks(true);
-        generateLooks(
-          photoUrl,
-          r.analysisId,
-          {
-            faceShape:           r.analysis.faceShape,
-            skinTone:            r.analysis.skinTone,
-            hairRecommendations: r.analysis.hairRecommendations ?? [],
-            outfitStyle:         r.analysis.outfitStyle ?? "",
-            colorPalette:        r.analysis.colorPalette ?? [],
-          },
-          occasion
-        )
-          .then(({ looks }) => setGeneratedLooks(looks))
-          .catch(() => { /* images optional — analysis already shown */ })
-          .finally(() => setGeneratingLooks(false));
-      }
+      // fal.ai InstantID look generation — both Basic (2 img) and Pro (5 img)
+      setGeneratedLooks([]); setGeneratingLooks(true);
+      generateLooks(
+        photoUrl,
+        r.analysisId,
+        {
+          faceShape:           r.analysis.faceShape,
+          skinTone:            r.analysis.skinTone,
+          hairRecommendations: r.analysis.hairRecommendations ?? [],
+          outfitStyle:         r.analysis.outfitStyle ?? "",
+          colorPalette:        r.analysis.colorPalette ?? [],
+        },
+        occasion
+      )
+        .then(({ looks }) => setGeneratedLooks(looks))
+        .catch(() => { /* images optional — analysis already shown */ })
+        .finally(() => setGeneratingLooks(false));
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Алдаа гарлаа";
       if (msg === "needsSubscription") { setStep("subscribe"); }
@@ -405,7 +400,7 @@ export default function AnalyzePage() {
                 {invoice.amount.toLocaleString()}₮
               </p>
               <p className="text-[0.85rem] text-[#8e8e93] mb-2">
-                {selectedPlan === "pro" ? "Pro · сард 40 шинжилгээ + AI Стилист" : "Basic · сард 20 шинжилгээ"}
+                {selectedPlan === "pro" ? "Pro · сард 20 шинжилгээ · 5 AI look" : "Basic · сард 5 шинжилгээ · 2 AI look"}
               </p>
               {upgradeInfo?.isUpgrade && (
                 <div className="inline-flex items-center gap-2 bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] rounded-full px-4 py-1.5 mb-6">
@@ -650,21 +645,19 @@ export default function AnalyzePage() {
               )}
             </div>
 
-            {/* Pro-only upsell for Basic users */}
-            {profile?.subscription?.plan === "basic" && !generatingLooks && generatedLooks.length === 0 && (
-              <div className="card p-5 flex items-center gap-4"
-                style={{ background: "linear-gradient(135deg,rgba(147,51,234,0.05),rgba(124,58,237,0.03))", border: "1px solid rgba(147,51,234,0.2)" }}>
-                <span className="text-[2rem] shrink-0">⭐</span>
+            {/* Pro upsell — shown after Basic user sees their 2 images */}
+            {profile?.subscription?.plan === "basic" && !generatingLooks && generatedLooks.length > 0 && (
+              <div className="card p-4 flex items-center gap-3"
+                style={{ background: "linear-gradient(135deg,rgba(147,51,234,0.04),rgba(124,58,237,0.02))", border: "1px solid rgba(147,51,234,0.15)" }}>
+                <span className="text-[1.4rem] shrink-0">⭐</span>
                 <div className="flex-1">
-                  <p className="text-[0.9rem] font-bold text-[#1c1c1e] mb-1">AI Look зураг — Pro захиалга</p>
-                  <p className="text-[0.8rem] text-[#6e6e73]">Pro захиалга авснаар таны selfie дээр тулгуурлан үс засалт, хувцасны look зурагнуудыг AI-аар үүсгэнэ.</p>
+                  <p className="text-[0.85rem] font-bold text-[#1c1c1e]">Pro-д 5 AI look зураг авна</p>
+                  <p className="text-[0.75rem] text-[#6e6e73]">2 үс засалт + 2 хувцас + 1 casual look</p>
                 </div>
-                <button
-                  onClick={handleProUpgrade}
-                  disabled={proPayState !== "idle"}
-                  className="shrink-0 text-[0.8rem] font-bold text-white px-4 py-2 rounded-full whitespace-nowrap border-none cursor-pointer"
+                <button onClick={handleProUpgrade} disabled={proPayState !== "idle"}
+                  className="shrink-0 text-[0.78rem] font-bold text-white px-3 py-[8px] rounded-full whitespace-nowrap border-none cursor-pointer"
                   style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)", opacity: proPayState !== "idle" ? 0.7 : 1 }}>
-                  {proPayState === "creating" ? "..." : "Pro авах →"}
+                  {proPayState === "creating" ? "..." : "Upgrade →"}
                 </button>
               </div>
             )}
@@ -683,7 +676,7 @@ export default function AnalyzePage() {
                     </div>
                   )}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   {generatedLooks.map((look) => (
                     <div key={look.name} className="relative rounded-xl overflow-hidden aspect-square bg-[#f5f5f7]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}

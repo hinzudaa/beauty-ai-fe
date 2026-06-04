@@ -416,7 +416,7 @@ export default function ProfilePage() {
                       {a.looks.length > 0 && (
                         <div>
                           <p className="label-style mb-3">AI үүсгэсэн look-ууд</p>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div className="grid grid-cols-2 gap-3">
                             {a.looks.map((l: { name: string; imageUrl: string }) => (
                               <div key={l.name} className="relative rounded-xl overflow-hidden aspect-square bg-[#f5f5f7]">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -130,7 +130,7 @@ export default function ShareResultClient({ data, shareUrl }: { data: ResultData
         {looks.length > 0 && (
           <div className="card p-5 mb-6">
             <p className="label-style mb-3">AI үүсгэсэн look-ууд</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               {looks.map((l) => (
                 <div key={l.name} className="relative rounded-xl overflow-hidden aspect-square bg-[#f5f5f7]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}

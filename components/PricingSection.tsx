@@ -19,19 +19,18 @@ type PayState  = "idle" | "creating" | "waiting" | "success";
 interface Props { basicPrice: number; proPrice: number; }
 
 const BASIC_FEATURES = [
-  "Сард 20 шинжилгээ",
-  "Нүүр · Үс & Грим · Хувцас — нэг дор",
-  "Бүрэн AI дүн шинжилгээ",
+  "Сард 5 шинжилгээ",
+  "Бүрэн AI looksmax шинжилгээ",
+  "2 AI Look зураг (1 үс + 1 хувцас)",
   "Өнгөний палет & зөвлөмж",
-  "Хувцас хослол санал болгох",
+  "Facebook-т хуваалцах",
 ];
 
 const PRO_FEATURES = [
-  "Сард 40 шинжилгээ",
-  "AI Look зурагнууд (gpt-image-1)",
+  "Сард 20 шинжилгээ",
+  "5 AI Look зураг (2 үс + 2 хувцас + 1 casual)",
   "AI Personal Stylist Chat",
   "Бүх Basic боломжууд",
-  "Хамгийн өндөр нарийвчлал",
 ];
 
 export default function PricingSection({ basicPrice, proPrice }: Props) {
