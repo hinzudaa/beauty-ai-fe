@@ -169,8 +169,9 @@ export default function AnalyzePage() {
       setResult(r); setActiveTab("hair"); setStep("result");
       setGeneratedLooks([]); setGeneratingLooks(true);
 
-      // Pass analysis data so DALL-E prompts are informed by face shape + skin tone
+      // gpt-image-1: хэрэглэгчийн selfie → нүүр хэвээр, үс/хувцас өөрчлөгдөнө
       generateLooks(
+        photoUrl,                            // ← original selfie
         {
           faceShape:           r.analysis.faceShape,
           skinTone:            r.analysis.skinTone,

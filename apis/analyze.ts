@@ -44,15 +44,19 @@ export function runFullAnalysis(photoUrl: string, event: string): Promise<FullAn
 }
 
 /**
- * DALL-E 3 generates inspiration images informed by the looksmax analysis.
- * Face shape + skin tone + recommendations are baked into every prompt.
- * Called after runFullAnalysis — images load progressively.
+ * gpt-image-1 image editing — хэрэглэгчийн SELFIE дээр тулгуурлан
+ * нүүр 100% хэвээр хадгалж, зөвхөн үс/хувцасыг өөрчилнө.
+ *
+ * @param imageUrl  Original selfie Cloudinary URL
+ * @param analysis  GPT-4o looksmax analysis
+ * @param occasion  Selected occasion for outfit prompt
  */
 export function generateLooks(
+  imageUrl: string,
   analysis: Pick<LooksMaxAnalysis, "faceShape" | "skinTone" | "hairRecommendations" | "outfitStyle">,
   occasion: string
 ): Promise<{ looks: GeneratedLook[] }> {
-  return http.post("/generate-looks", { analysis, occasion });
+  return http.post("/generate-looks", { imageUrl, analysis, occasion });
 }
 
 export function fileToDataUrl(file: File): Promise<string> {
