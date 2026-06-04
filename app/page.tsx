@@ -365,8 +365,8 @@ export default async function Home() {
           >
             <div className="flex gap-8 flex-wrap">
               {[
-                { num: "500+", label: "Хэрэглэгч" },
-                { num: "2",    label: "Багц сонголт" },
+                { num: "100+", label: "Хэрэглэгч" },
+                { num: "3",    label: "Багц сонголт" },
                 { num: "4",    label: "AI функц" },
                 { num: "30s",  label: "Үр дүн авах хугацаа" },
               ].map((s) => (
