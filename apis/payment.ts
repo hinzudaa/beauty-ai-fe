@@ -41,5 +41,5 @@ export interface UpgradePrice {
 }
 
 /** Get pro-rated upgrade price for a plan */
-export const getUpgradePrice = (plan: "basic" | "pro"): Promise<UpgradePrice> =>
+export const getUpgradePrice = (plan: "basic" | "standard" | "pro"): Promise<UpgradePrice> =>
   http.get(`/upgrade-price`, { plan });

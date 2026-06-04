@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { tokenStore } from "@/utils/request";
 import { getProfile } from "@/apis/profile";
 import {
@@ -44,11 +45,13 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
   const [subState,    setSubState]    = useState<SubState>(() =>
     tokenStore.get() ? "loading" : "no-auth"
   );
-  const [upgradeInfo, setUpgradeInfo] = useState<UpgradePrice | null>(null);
+  // upgradeInfos[targetPlan] = pro-rated price to upgrade from current → target
+  const [upgradeInfos, setUpgradeInfos] = useState<Partial<Record<"standard"|"pro", UpgradePrice>>>({});
   const [payState,     setPayState]     = useState<PayState>("idle");
   const [invoice,      setInvoice]      = useState<InvoiceResponse | null>(null);
   const [activePlan,   setActivePlan]   = useState<"basic" | "standard" | "pro" | null>(null);
   const [payError,     setPayError]     = useState<string | null>(null);
+  const router  = useRouter();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Check current subscription
@@ -59,8 +62,23 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
       .then((p) => {
         const plan = p.subscription?.status === "active" ? p.subscription.plan : null;
         setSubState(plan ?? "no-sub");
-        if (plan === "basic" || plan === "standard") {
-          getUpgradePrice("pro").then(setUpgradeInfo).catch(() => {});
+        // Fetch upgrade prices for valid upgrade paths only
+        if (plan === "basic") {
+          // basic → standard and basic → pro
+          Promise.allSettled([
+            getUpgradePrice("standard"),
+            getUpgradePrice("pro"),
+          ]).then(([stdRes, proRes]) => {
+            setUpgradeInfos({
+              standard: stdRes.status === "fulfilled" ? stdRes.value : undefined,
+              pro:      proRes.status === "fulfilled" ? proRes.value : undefined,
+            });
+          });
+        } else if (plan === "standard") {
+          // standard → pro only
+          getUpgradePrice("pro")
+            .then((info) => setUpgradeInfos({ pro: info }))
+            .catch(() => {});
         }
       })
       .catch(() => setSubState("no-sub"));
@@ -69,9 +87,9 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
   // Cleanup poll on unmount
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
-  async function handleSubscribe(plan: "basic" | "pro") {
+  async function handleSubscribe(plan: "basic" | "standard" | "pro") {
     if (!tokenStore.get()) {
-      window.location.href = `/login?next=${encodeURIComponent(`/?plan=${plan}`)}`;
+      router.push(`/login?next=${encodeURIComponent(`/?plan=${plan}`)}`);
       return;
     }
     setPayError(null);
@@ -131,7 +149,24 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
           { id: "pro"      as const, name: "Pro",       price: proPrice,      color: "#9333ea", dark: true  },
         ]).map((plan, idx) => {
           const isCurrent = subState === plan.id;
-          const showUpgrade = upgradeInfo?.isUpgrade && plan.id === "pro" && (subState === "basic" || subState === "standard");
+
+          // Valid upgrade paths: basic→standard, basic→pro, standard→pro
+          const UPGRADE_PATHS: Record<string, string[]> = {
+            basic:    ["standard", "pro"],
+            standard: ["pro"],
+            pro:      [],
+          };
+          const canUpgrade = !isCurrent &&
+            (subState === "loading" || subState === "no-auth" || subState === "no-sub"
+              ? false
+              : UPGRADE_PATHS[subState]?.includes(plan.id) ?? false);
+
+          const upgradeInfo = upgradeInfos[plan.id as "standard" | "pro"];
+          const showUpgrade = canUpgrade && upgradeInfo?.isUpgrade;
+          // Downgrade = user has an active plan but target is lower tier
+          const hasActivePlan = subState === "basic" || subState === "standard" || subState === "pro";
+          const isDowngrade   = !isCurrent && !canUpgrade && hasActivePlan;
+
           const disabled = payState !== "idle" && activePlan !== plan.id;
           const creating = payState === "creating" && activePlan === plan.id;
 
@@ -216,6 +251,11 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
                   style={{ color: plan.color, background: `${plan.color}10`, border: `1px solid ${plan.color}25` }}>
                   {plan.name} идэвхтэй
                 </div>
+              ) : isDowngrade && (subState === "standard" || subState === "pro") ? (
+                /* Downgrade path — disabled */
+                <div className="text-center py-[12px] rounded-full text-[0.82rem] text-[#aeaeb2] border border-[rgba(0,0,0,0.08)]">
+                  Боломжгүй
+                </div>
               ) : (
                 <button onClick={() => handleSubscribe(plan.id)} disabled={disabled}
                   className="block w-full text-center rounded-full py-[12px] font-bold text-[0.87rem] transition-all cursor-pointer border-none"
@@ -228,6 +268,7 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
                   }}>
                   {creating ? "Үүсгэж байна..."
                     : showUpgrade ? `Upgrade → ₮${upgradeInfo!.amount.toLocaleString()}`
+                    : canUpgrade && upgradeInfo && !upgradeInfo.isUpgrade ? `${plan.name} руу шилжих →`
                     : `${plan.name} захиалах →`}
                 </button>
               )}
@@ -259,8 +300,10 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
                 <p className="text-[1.2rem] font-extrabold text-[#1c1c1e] mb-2">Төлбөр амжилттай!</p>
                 <p className="text-[0.88rem] text-[#6e6e73] mb-6">
                   {activePlan === "pro"
-                    ? "Pro захиалга идэвхжлээ. Сард 40 шинжилгээ + AI Look зурагнууд."
-                    : "Basic захиалга идэвхжлээ. Сард 20 шинжилгээ."}
+                    ? "Pro идэвхжлээ. Сард 20 шинжилгээ · 5 AI look · AI Стилист чат."
+                    : activePlan === "standard"
+                    ? "Standard идэвхжлээ. Сард 10 шинжилгээ · 3 AI look."
+                    : "Basic идэвхжлээ. Сард 5 шинжилгээ · 2 AI look."}
                 </p>
                 <Link href="/analyze"
                   className="block w-full py-[13px] rounded-full font-bold text-[0.92rem] text-white"
@@ -284,13 +327,13 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
                     {invoice.amount.toLocaleString()}₮
                   </p>
                   <p className="text-[0.84rem] text-[#8e8e93]">
-                    {activePlan === "pro"
-                      ? (upgradeInfo?.isUpgrade ? "Pro upgrade" : "Pro · сард 40 шинжилгээ")
-                      : "Basic · сард 20 шинжилгээ"}
+                    {activePlan === "pro" ? "Pro · сард 20 шинжилгээ · 5 AI look"
+                      : activePlan === "standard" ? "Standard · сард 10 шинжилгээ · 3 AI look"
+                      : "Basic · сард 5 шинжилгээ · 2 AI look"}
                   </p>
-                  {upgradeInfo?.isUpgrade && activePlan === "pro" && (
+                  {activePlan && upgradeInfos[activePlan as "standard" | "pro"]?.isUpgrade && (
                     <p className="text-[0.72rem] font-semibold text-[#9333ea] mt-1">
-                      -{upgradeInfo.discount.toLocaleString()}₮ хөнгөлөлт агуулсан
+                      -{upgradeInfos[activePlan as "standard" | "pro"]!.discount.toLocaleString()}₮ хөнгөлөлт агуулсан
                     </p>
                   )}
 

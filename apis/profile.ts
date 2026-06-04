@@ -13,7 +13,7 @@ export interface ProfilePayment {
 }
 
 export interface Subscription {
-  plan:           "basic" | "pro";
+  plan:           "basic" | "standard" | "pro";
   status:         "active" | "expired";
   expiresAt:      string;
   monthlyUsage:   number;
