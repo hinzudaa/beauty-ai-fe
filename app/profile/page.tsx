@@ -374,10 +374,10 @@ export default function ProfilePage() {
                       )}
 
                       {/* Hidden strengths */}
-                      {a.analysis.hiddenStrengths?.length > 0 && (
+                      {(a.analysis.hiddenStrengths?.length ?? 0) > 0 && (
                         <div className="bg-[rgba(147,51,234,0.04)] rounded-xl p-3 border border-[rgba(147,51,234,0.12)]">
                           <p className="label-style text-[#9333ea] mb-2">✨ Бусад анзаардаг онцлог</p>
-                          {a.analysis.hiddenStrengths.map((s: string, i: number) => (
+                          {a.analysis.hiddenStrengths?.map((s: string, i: number) => (
                             <div key={i} className="flex gap-2 text-[0.8rem] text-[#3a3a3c] mb-1">
                               <span className="text-[#9333ea] shrink-0">✦</span>{s}
                             </div>
