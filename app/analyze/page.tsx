@@ -63,7 +63,7 @@ export default function AnalyzePage() {
     tokenStore.get() ? "checking" : "subscribe"
   );
   const [notLoggedIn, setNotLoggedIn] = useState(() => !tokenStore.get());
-  const [selectedPlan, setSelectedPlan] = useState<"basic" | "pro" | null>(() => {
+  const [selectedPlan, setSelectedPlan] = useState<"basic" | "standard" | "pro" | null>(() => {
     const p = typeof window !== "undefined"
       ? new URLSearchParams(window.location.search).get("plan")
       : null;
