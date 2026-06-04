@@ -39,15 +39,19 @@ export interface SavedAnalysis {
   id:        string;
   photoUrl:  string;
   analysis:  {
-    faceShape:    string;
-    lookmaxScore: number;
-    skinTone:     string;
-    strengths:    string[];
-    improvements: string[];
+    faceShape:        string;
+    lookmaxScore:     number;
+    skinTone:         string;
+    undertone?:       string;
+    seasonalColor?:   string;
+    hiddenStrengths?: string[];
+    strengths:        string[];
+    improvements:     string[];
+    makeupTips?:      string;
     hairRecommendations: string[];
-    outfitStyle:  string;
-    colorPalette: string[];
-    features:     Record<string, string>;
+    outfitStyle:      string;
+    colorPalette:     string[];
+    features:         Record<string, string>;
   };
   looks:     Array<{ name: string; imageUrl: string }>;
   occasion:  string;
