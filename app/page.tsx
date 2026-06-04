@@ -119,9 +119,9 @@ function PricingCard({ name, price, tag, features, cta, href, highlight = false,
 
 export default async function Home() {
   const prices = await getPrices();
-  const basicPrice    = prices.basicPrice    ?? 19999;
-  const standardPrice = prices.standardPrice ?? 24999;
-  const proPrice      = prices.proPrice      ?? 29999;
+  const basicPrice    = prices.basicPrice    ?? 19900;
+  const standardPrice = prices.standardPrice ?? 29900;
+  const proPrice      = prices.proPrice      ?? 39900;
   return (
     <div className="bg-[#f2f2f7] min-h-screen">
 

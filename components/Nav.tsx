@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSyncExternalStore } from "react";
@@ -8,17 +9,17 @@ import { useAuth } from "@/lib/AuthContext";
 
 const links = [
   { href: "/analyze", label: "Шинжилгээ" },
-  { href: "/chat",    label: "AI Стилист" },
+  { href: "/chat", label: "AI Стилист" },
 ];
 
-const noop = () => () => {};
+const noop = () => () => { };
 const useIsClient = () => useSyncExternalStore(noop, () => true, () => false);
 
 export default function Nav() {
-  const pathname  = usePathname();
-  const router    = useRouter();
+  const pathname = usePathname();
+  const router = useRouter();
   const { user, logout, loading } = useAuth();
-  const isClient  = useIsClient();
+  const isClient = useIsClient();
   const [open, setOpen] = useState(false);
 
   if (pathname === "/login") return null;
@@ -36,30 +37,8 @@ export default function Nav() {
         }}
       >
         {/* Logo */}
-        <Link href="/" onClick={close} className="flex items-center gap-[9px] shrink-0">
-          <div
-            className="w-8 h-8 rounded-[10px] flex items-center justify-center relative overflow-hidden shrink-0"
-            style={{
-              background: "linear-gradient(145deg,#9333ea 0%,#7c3aed 60%,#6d28d9 100%)",
-              boxShadow: "0 3px 12px rgba(147,51,234,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
-            }}
-          >
-            <div
-              className="absolute top-0 left-0 right-0 h-[45%] rounded-t-[10px]"
-              style={{ background: "linear-gradient(to bottom,rgba(255,255,255,0.18),transparent)" }}
-            />
-            <span className="text-white text-[0.8rem] font-black tracking-[-0.03em] relative">L</span>
-          </div>
-          <span
-            className="font-extrabold text-[1.2rem] tracking-[-0.035em] bg-clip-text text-transparent"
-            style={{
-              background: "linear-gradient(135deg,#1c1c1e 0%,#3a3a3c 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            Looka
-          </span>
+        <Link href="/" onClick={close} className="shrink-0">
+          <Image src="/logo.svg" alt="Looka" width={95} height={36} priority />
         </Link>
 
         {/* Centre links — desktop only */}

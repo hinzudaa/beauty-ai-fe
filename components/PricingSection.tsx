@@ -19,24 +19,31 @@ type PayState  = "idle" | "creating" | "waiting" | "success";
 
 interface Props { basicPrice: number; standardPrice: number; proPrice: number; }
 
+const PLAN_TAGLINES = {
+  basic:    "✨ Төрхөө таньж, өөртөө хамгийн тохирох дүр төрхөө нээгээрэй.",
+  standard: "🚀 Илүү их шинжилгээ, илүү нарийвчилсан зөвлөмж.",
+  pro:      "👑 Хувийн стилисттэй мэт цогц туршлага.",
+};
+
 const PLAN_FEATURES = {
   basic: [
-    "Сард 5 шинжилгээ",
-    "Бүрэн AI looksmax шинжилгээ",
-    "2 AI Look зураг",
-    "Өнгөний палет & зөвлөмж",
+    "Сард 5 AI царайны шинжилгээ",
+    "Царайны бүтэц, харьцааны бүрэн үнэлгээ",
+    "2 AI дүр төрхийн зураг",
+    "Танд тохирох өнгө, хувцаслалтын зөвлөмж",
   ],
   standard: [
-    "Сард 10 шинжилгээ",
-    "Бүрэн AI looksmax шинжилгээ",
-    "2 AI Look зураг",
-    "Өнгөний палет & зөвлөмж",
+    "Сард 10 AI царайны шинжилгээ",
+    "Царайны бүтэц, харьцааны бүрэн үнэлгээ",
+    "2 AI дүр төрхийн зураг",
+    "Танд тохирох өнгө, хувцаслалтын зөвлөмж",
   ],
   pro: [
-    "Сард 10 шинжилгээ",
-    "4 AI Look зураг",
-    "AI Personal Stylist Chat",
-    "Бүх Basic боломжууд",
+    "Сард 10 AI царайны шинжилгээ",
+    "Царайны бүтэц, харьцааны бүрэн үнэлгээ",
+    "4 AI дүр төрхийн зураг",
+    "Танд тохирох өнгө, хувцаслалтын зөвлөмж",
+    "AI хувийн стилисттэй чатлах эрх",
   ],
 };
 
@@ -206,9 +213,9 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
                       Идэвхтэй ✓
                     </span>
                   )}
-                  {!isCurrent && plan.dark && (
+                  {plan.dark && (
                     <span className="text-[0.58rem] font-bold text-[#c084fc] bg-[rgba(192,132,252,0.12)] border border-[rgba(192,132,252,0.28)] rounded-full px-[9px] py-[2px] whitespace-nowrap">
-                      Хамгийн сайн
+                      ⭐ Хамгийн их сонголт
                     </span>
                   )}
                 </div>
@@ -236,6 +243,12 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
                   </>
                 )}
               </div>
+
+              {/* Tagline */}
+              <p className="text-[0.82rem] leading-[1.55]"
+                style={{ color: plan.dark ? "rgba(255,255,255,0.55)" : "#6e6e73" }}>
+                {PLAN_TAGLINES[plan.id]}
+              </p>
 
               <div className="h-px" style={{ background: plan.dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }} />
 
@@ -273,7 +286,7 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
                   {creating ? "Үүсгэж байна..."
                     : showUpgrade ? `Upgrade → ₮${upgradeInfo!.amount.toLocaleString()}`
                     : canUpgrade && upgradeInfo && !upgradeInfo.isUpgrade ? `${plan.name} руу шилжих →`
-                    : `${plan.name} захиалах →`}
+                    : `${plan.name} багц авах →`}
                 </button>
               )}
             </div>
