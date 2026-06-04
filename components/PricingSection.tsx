@@ -175,8 +175,8 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
               className={`anim-fade-up rounded-[24px] flex flex-col gap-5 relative overflow-hidden`}
               style={{
                 animationDelay: `${(idx + 1) * 100}ms`,
-                background:     plan.dark ? "#1c1c1e" : isCurrent ? `${plan.color}06` : "#fff",
-                border:         plan.dark ? "none" : isCurrent ? `1.5px solid ${plan.color}40` : "1px solid rgba(0,0,0,0.08)",
+                background:     plan.dark ? "#1c1c1e" : isCurrent ? `${plan.color}06` : canUpgrade ? "#fff" : "#fff",
+                border:         plan.dark ? "none" : isCurrent ? `1.5px solid ${plan.color}40` : canUpgrade ? "1px solid rgba(0,0,0,0.14)" : "1px solid rgba(0,0,0,0.08)",
                 boxShadow:      plan.dark
                   ? isCurrent ? `0 0 0 2.5px ${plan.color}, 0 20px 60px rgba(28,28,30,0.22)` : "0 20px 60px rgba(28,28,30,0.22)"
                   : "0 2px 16px rgba(0,0,0,0.05)",
@@ -197,7 +197,7 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
               <div>
                 <div className="flex items-start justify-between mb-3 gap-2">
                   <span className="text-[0.68rem] font-bold tracking-[0.1em] uppercase"
-                    style={{ color: plan.dark ? "rgba(255,255,255,0.45)" : "#8e8e93" }}>
+                    style={{ color: plan.dark ? "rgba(255,255,255,0.45)" : canUpgrade ? "#6e6e73" : "#8e8e93" }}>
                     {plan.name}
                   </span>
                   {isCurrent && (
@@ -216,17 +216,20 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
                 {showUpgrade ? (
                   <div>
                     <div className="flex items-end gap-2 mb-1">
-                      <p className="text-[2.4rem] font-extrabold tracking-[-0.04em] leading-none text-white">₮{upgradeInfo!.amount.toLocaleString()}</p>
-                      <p className="text-[1rem] line-through mb-0.5 text-[rgba(255,255,255,0.3)]">₮{plan.price.toLocaleString()}</p>
+                      <p className="text-[2.4rem] font-extrabold tracking-[-0.04em] leading-none"
+                        style={{ color: plan.dark ? "#fff" : "#1c1c1e" }}>₮{upgradeInfo!.amount.toLocaleString()}</p>
+                      <p className="text-[1rem] line-through mb-0.5"
+                        style={{ color: plan.dark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)" }}>₮{plan.price.toLocaleString()}</p>
                     </div>
-                    <p className="text-[0.68rem] font-semibold text-[#c084fc]">
+                    <p className="text-[0.68rem] font-semibold"
+                      style={{ color: plan.dark ? "#c084fc" : "#9333ea" }}>
                       -{upgradeInfo!.discount.toLocaleString()}₮ хасагдсан
                     </p>
                   </div>
                 ) : (
                   <>
                     <p className="text-[2.4rem] font-extrabold tracking-[-0.04em] leading-none mb-1"
-                      style={{ color: plan.dark ? "#fff" : "#1c1c1e" }}>
+                      style={{ color: plan.dark ? "#fff" : canUpgrade ? "#1c1c1e" : "#3a3a3c" }}>
                       ₮{plan.price.toLocaleString()}
                     </p>
                     <p className="text-[0.82rem]" style={{ color: plan.dark ? "rgba(255,255,255,0.38)" : "#8e8e93" }}>/ сар</p>
@@ -239,8 +242,9 @@ export default function PricingSection({ basicPrice, standardPrice, proPrice }: 
               <ul className="list-none p-0 flex flex-col gap-[10px] flex-1">
                 {PLAN_FEATURES[plan.id].map((f) => (
                   <li key={f} className="flex gap-[8px] text-[0.83rem] leading-[1.45]"
-                    style={{ color: plan.dark ? "rgba(255,255,255,0.78)" : "#3a3a3c" }}>
-                    <span className="shrink-0 font-bold" style={{ color: plan.color }}>✓</span>{f}
+                    style={{ color: plan.dark ? "rgba(255,255,255,0.78)" : canUpgrade ? "#1c1c1e" : "#3a3a3c" }}>
+                    <span className="shrink-0 font-bold"
+                      style={{ color: plan.dark ? plan.color : canUpgrade ? plan.color === "#6e6e73" ? "#1c1c1e" : plan.color : plan.color }}>✓</span>{f}
                   </li>
                 ))}
               </ul>
