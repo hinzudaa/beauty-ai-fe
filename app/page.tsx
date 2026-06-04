@@ -15,8 +15,8 @@ function ScanDot({ x, y, delay = "0s" }: { x: string; y: string; delay?: string 
   );
 }
 
-function HairCard({ label, isFirst, videoSrc, delay = "0ms" }: {
-  label: string; isFirst?: boolean; videoSrc: string; delay?: string;
+function HairCard({ label, isFirst, src, delay = "0ms" }: {
+  label: string; isFirst?: boolean; src: string; delay?: string;
 }) {
   return (
     <div
@@ -24,7 +24,8 @@ function HairCard({ label, isFirst, videoSrc, delay = "0ms" }: {
       style={{ animationDelay: delay }}
     >
       <div className="aspect-[3/4]">
-        <video src={videoSrc} autoPlay muted loop playsInline className="w-full h-full object-cover block" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={src} alt={label} className="w-full h-full object-cover block" />
       </div>
       {isFirst && (
         <div
@@ -213,9 +214,10 @@ export default async function Home() {
 
               {/* Left — face scan */}
               <div className="anim-scale-in delay-500 relative rounded-[18px] overflow-hidden bg-[#111122] shrink-0 w-[min(220px,100%)]">
-                <video
-                  src="https://pub-b4ea1073afd44537a913d4d4b2a8fbae.r2.dev/assets/asset-016.mp4"
-                  autoPlay muted loop playsInline
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/image/original.jpg"
+                  alt="Face scan"
                   className="w-full object-cover block opacity-85"
                   style={{ aspectRatio: "3/4" }}
                 />
@@ -262,11 +264,11 @@ export default async function Home() {
                 </div>
 
                 <div className="flex gap-[9px] overflow-hidden">
-                  <HairCard label="Short bob" isFirst delay="500ms" videoSrc="https://pub-b4ea1073afd44537a913d4d4b2a8fbae.r2.dev/assets/asset-016.mp4" />
-                  <HairCard label="Wavy lob"  delay="580ms" videoSrc="https://pub-b4ea1073afd44537a913d4d4b2a8fbae.r2.dev/assets/asset-017.mp4" />
-                  <HairCard label="Updo"      delay="660ms" videoSrc="https://pub-b4ea1073afd44537a913d4d4b2a8fbae.r2.dev/assets/asset-018.mp4" />
-                  <HairCard label="Straight"  delay="740ms" videoSrc="https://pub-b4ea1073afd44537a913d4d4b2a8fbae.r2.dev/assets/asset-019.mp4" />
-                  <HairCard label="Braided"   delay="820ms" videoSrc="https://pub-b4ea1073afd44537a913d4d4b2a8fbae.r2.dev/assets/asset-016.mp4" />
+                  <HairCard label="Short bob" isFirst delay="500ms" src="/image/shortbob.jpg" />
+                  <HairCard label="Wavy lob"  delay="580ms"        src="/image/wavylob.jpg"  />
+                  <HairCard label="Updo"      delay="660ms"        src="/image/updo.jpg"     />
+                  <HairCard label="Straight"  delay="740ms"        src="/image/straight.jpg" />
+                  <HairCard label="Braided"   delay="820ms"        src="/image/braided.jpg"  />
                 </div>
 
                 <div className="anim-fade-in delay-700 flex flex-wrap gap-[7px]">
