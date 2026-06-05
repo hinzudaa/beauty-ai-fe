@@ -306,7 +306,7 @@ export default function AnalyzePage() {
           // 1. Looks generated successfully
           // 2. New score is HIGHER than existing score (improvement)
           if (looks.length > 0) {
-            const newScore   = Math.round((r.analysis.lookmaxScore ?? 0) * 10 * 10) / 10;
+            const newScore   = Math.round((r.analysis.lookmaxScore ?? 0) * 10 * 100) / 100;
             const prevScore  = user?.lookScore ?? 0;
             if (newScore > prevScore) {
               setShowLbConsent(true);
@@ -766,9 +766,9 @@ export default function AnalyzePage() {
                   <p className="label-style mb-1">Looksmax оноо</p>
                   <div className="flex items-end gap-2">
                     <span className="text-[3rem] font-extrabold text-[#1c1c1e] leading-none tracking-[-0.04em]">
-                      {result.analysis.lookmaxScore}
+                      {(result.analysis.lookmaxScore * 10).toFixed(2)}
                     </span>
-                    <span className="text-[#aeaeb2] text-[1rem] mb-1">/10</span>
+                    <span className="text-[#aeaeb2] text-[1rem] mb-1">/100</span>
                   </div>
                 </div>
                 <div className="text-right">
@@ -1060,7 +1060,7 @@ export default function AnalyzePage() {
       {/* ── Leaderboard consent modal ── */}
       {showLbConsent && (
         <LeaderboardConsent
-          lookScore={result?.analysis?.lookmaxScore ? Math.round(result.analysis.lookmaxScore * 10 * 10) / 10 : 0}
+          lookScore={result?.analysis?.lookmaxScore ? Math.round(result.analysis.lookmaxScore * 10 * 100) / 100 : 0}
           looks={generatedLooks}
           username={user?.username ?? null}
           onClose={() => setShowLbConsent(false)}

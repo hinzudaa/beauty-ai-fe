@@ -55,6 +55,12 @@ export default function ProfilePage() {
   // Leaderboard rank
   const [myRank, setMyRank] = useState<number | null>(null);
 
+  // Leaderboard avatar management
+  const [lbPickerOpen, setLbPickerOpen]     = useState(false);
+  const [lbSelectedUrl, setLbSelectedUrl]   = useState<string | null>(null);
+  const [lbSaving,      setLbSaving]        = useState(false);
+  const [lbVisible,     setLbVisible]       = useState(false);
+
   // Slide-up when modal opens, slide-down before closing
   useEffect(() => {
     if (expanded) {
@@ -62,14 +68,15 @@ export default function ProfilePage() {
     }
   }, [expanded]);
 
-  // Fetch user's leaderboard rank
+  // Fetch user's leaderboard rank + visibility
   useEffect(() => {
     if (!user?.username) return;
     fetch(`${siteUrl}/leaderboard`)
       .then((r) => r.json())
       .then((d: { data: Array<{ username: string; rank: number }> }) => {
         const found = d.data?.find((e) => e.username === user.username);
-        if (found) setMyRank(found.rank);
+        if (found) { setMyRank(found.rank); setLbVisible(true); }
+        else        { setLbVisible(false); }
       })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -108,6 +115,21 @@ export default function ProfilePage() {
       window.location.reload(); // refresh to show new username
     } catch { setUnameError("Алдаа гарлаа"); }
     finally { setUnameSaving(false); }
+  }
+
+  async function saveLbSettings(show: boolean, avatarUrl?: string) {
+    setLbSaving(true);
+    try {
+      await fetch(`${siteUrl}/auth/leaderboard-consent`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenStore.get()}` },
+        body:    JSON.stringify({ show, avatarUrl }),
+      });
+      setLbVisible(show);
+      if (!show) setMyRank(null);
+      setLbPickerOpen(false);
+    } catch { /* ignore */ }
+    finally { setLbSaving(false); }
   }
 
   function closeModal() {
@@ -351,6 +373,107 @@ export default function ProfilePage() {
               )}
             </div>
 
+            {/* Leaderboard photo management */}
+            {user?.username && user?.lookScore != null && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[0.72rem] font-bold text-[#6e6e73] uppercase tracking-[0.08em]">
+                    Leaderboard харагдах байдал
+                  </p>
+                  {/* Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => lbVisible ? saveLbSettings(false) : setLbPickerOpen(true)}
+                    disabled={lbSaving}
+                    className="relative w-11 h-6 rounded-full border-none cursor-pointer transition-all disabled:opacity-50 shrink-0"
+                    style={{ background: lbVisible ? "linear-gradient(270deg,#9333ea,#7c3aed)" : "rgba(0,0,0,0.12)" }}
+                  >
+                    <span className="absolute top-0.5 transition-all duration-200 w-5 h-5 rounded-full bg-white shadow"
+                      style={{ left: lbVisible ? "calc(100% - 22px)" : "2px" }} />
+                  </button>
+                </div>
+
+                {lbVisible && !lbPickerOpen && (
+                  <button
+                    type="button"
+                    onClick={() => { setLbPickerOpen(true); setLbSelectedUrl(user.avatarUrl ?? null); }}
+                    className="w-full py-2 rounded-xl text-[0.78rem] font-semibold border border-[rgba(147,51,234,0.2)] text-[#9333ea] bg-[rgba(147,51,234,0.04)] cursor-pointer hover:bg-[rgba(147,51,234,0.08)] transition-all"
+                  >
+                    🖼 Харуулах зураг солих
+                  </button>
+                )}
+
+                {/* Photo picker — only looks from high-score analyses */}
+                {lbPickerOpen && (() => {
+                  // Collect all generated looks sorted by score (highest first)
+                  const allLooks = (analysesData?.data ?? [])
+                    .filter((a) => a.looks && a.looks.length > 0)
+                    .sort((a, b) => (b.analysis.lookmaxScore ?? 0) - (a.analysis.lookmaxScore ?? 0))
+                    .flatMap((a) =>
+                      a.looks.map((l: { name: string; imageUrl: string }) => ({
+                        ...l,
+                        score: (a.analysis.lookmaxScore * 10).toFixed(2),
+                      }))
+                    );
+
+                  return (
+                    <div className="mt-2 p-3 rounded-[18px] bg-[rgba(147,51,234,0.03)] border border-[rgba(147,51,234,0.12)]">
+                      <p className="text-[0.7rem] font-bold text-[#9333ea] mb-3">
+                        Leaderboard-д харуулах зургаа сонгоно уу
+                      </p>
+                      {allLooks.length === 0 ? (
+                        <p className="text-[0.75rem] text-[#aeaeb2] text-center py-3">
+                          Генерэт зураг байхгүй байна
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          {allLooks.map((look) => (
+                            <button
+                              key={look.imageUrl}
+                              type="button"
+                              onClick={() => setLbSelectedUrl(look.imageUrl)}
+                              className="relative rounded-xl overflow-hidden cursor-pointer border-none p-0"
+                              style={{
+                                aspectRatio: "3/4",
+                                outline: lbSelectedUrl === look.imageUrl ? "3px solid #9333ea" : "2px solid transparent",
+                                borderRadius: 12,
+                              }}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={look.imageUrl} alt={look.name} className="w-full h-full object-cover" />
+                              {lbSelectedUrl === look.imageUrl && (
+                                <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center"
+                                  style={{ background: "#9333ea" }}>
+                                  <span className="text-white text-[0.6rem] font-black">✓</span>
+                                </div>
+                              )}
+                              <div className="absolute bottom-0 left-0 right-0 px-1.5 pb-1.5 pt-4"
+                                style={{ background: "linear-gradient(to top,rgba(0,0,0,0.65),transparent)" }}>
+                                <p className="text-[0.55rem] font-bold text-white text-center">{look.score}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <button onClick={() => setLbPickerOpen(false)}
+                          className="flex-1 py-2 rounded-full text-[0.78rem] font-semibold border border-[rgba(0,0,0,0.1)] text-[#6e6e73] cursor-pointer bg-transparent">
+                          Болих
+                        </button>
+                        <button
+                          onClick={() => saveLbSettings(true, lbSelectedUrl ?? undefined)}
+                          disabled={!lbSelectedUrl || lbSaving}
+                          className="flex-1 py-2 rounded-full text-[0.78rem] font-extrabold text-white border-none cursor-pointer disabled:opacity-40"
+                          style={{ background: "linear-gradient(270deg,#9333ea,#7c3aed)" }}>
+                          {lbSaving ? "..." : "🏆 Хадгалах"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
             {/* Username edit */}
             {!editingUsername ? (
               <button
@@ -432,7 +555,7 @@ export default function ProfilePage() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={a.photoUrl} alt="selfie" className="w-full h-full object-cover object-center" />
                     <div className="absolute top-2 right-2 bg-[#1c1c1e] text-white text-[0.7rem] font-extrabold px-2 py-1 rounded-lg">
-                      {a.analysis.lookmaxScore}/10
+                      {(a.analysis.lookmaxScore * 10).toFixed(2)}/100
                     </div>
                     <div className="absolute bottom-0 left-0 right-0 px-3 pb-2 pt-6"
                       style={{ background: "linear-gradient(to top,rgba(0,0,0,0.65),transparent)" }}>
@@ -525,7 +648,7 @@ export default function ProfilePage() {
               <div>
                 <p className="text-[0.72rem] font-bold text-[#9333ea] uppercase tracking-[0.08em]">Дэлгэрэнгүй үр дүн</p>
                 <p className="text-[0.9rem] font-bold text-[#1c1c1e] mt-0.5">
-                  {expanded.analysis.faceShape} · {expanded.analysis.lookmaxScore}/10
+                  {expanded.analysis.faceShape} · {(expanded.analysis.lookmaxScore * 10).toFixed(2)}/100
                 </p>
               </div>
               <button onClick={closeModal}
@@ -543,8 +666,8 @@ export default function ProfilePage() {
                   <div>
                     <p className="label-style mb-1">Looksmax оноо</p>
                     <div className="flex items-end gap-1">
-                      <span className="text-[2.4rem] font-extrabold text-[#1c1c1e] leading-none tracking-[-0.04em]">{expanded.analysis.lookmaxScore}</span>
-                      <span className="text-[#aeaeb2] text-[0.9rem] mb-1">/10</span>
+                      <span className="text-[2.4rem] font-extrabold text-[#1c1c1e] leading-none tracking-[-0.04em]">{(expanded.analysis.lookmaxScore * 10).toFixed(2)}</span>
+                      <span className="text-[#aeaeb2] text-[0.9rem] mb-1">/100</span>
                     </div>
                   </div>
                   <div className="text-right">
