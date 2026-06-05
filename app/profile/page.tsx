@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { useAuth } from "@/lib/AuthContext";
-import { useState, useEffect } from "react";
+import { useReducer, useRef, useEffect } from "react";
 import { getProfile, getAnalyses, ProfileData, SavedAnalysis } from "@/apis/profile";
 import { appUrl, siteUrl } from "@/config/site";
 import { tokenStore } from "@/utils/request";
@@ -29,79 +29,90 @@ function fmt(d: string) {
   return new Date(d).toLocaleDateString("mn-MN", { year: "numeric", month: "2-digit", day: "2-digit" });
 }
 
+// ── Single state + patch reducer (13 useState → 1) ──────────────
+type ProfileState = {
+  analysisPage:    number;
+  expanded:        SavedAnalysis | null;
+  modalVisible:    boolean;
+  previewImg:      { url: string; name: string } | null;
+  editingUsername: boolean;
+  newUsername:     string;
+  unameStatus:     "idle" | "checking" | "ok" | "taken" | "invalid";
+  unameSaving:     boolean;
+  unameError:      string | null;
+  myRank:          number | null;
+  lbPickerOpen:    boolean;
+  lbSelectedUrl:   string | null;
+  lbSaving:        boolean;
+  lbVisible:       boolean;
+};
+
+const PROFILE_INITIAL: ProfileState = {
+  analysisPage: 1, expanded: null, modalVisible: false, previewImg: null,
+  editingUsername: false, newUsername: "", unameStatus: "idle",
+  unameSaving: false, unameError: null, myRank: null,
+  lbPickerOpen: false, lbSelectedUrl: null, lbSaving: false, lbVisible: false,
+};
+
+function profileReducer(prev: ProfileState, next: Partial<ProfileState>): ProfileState {
+  return { ...prev, ...next };
+}
+
 export default function ProfilePage() {
   const { user, logout, refreshUser } = useAuth();
   const router = useRouter();
+  const [s, set] = useReducer(profileReducer, PROFILE_INITIAL);
+  const {
+    analysisPage, expanded, modalVisible, previewImg, editingUsername,
+    newUsername, unameStatus, unameSaving, unameError, myRank,
+    lbPickerOpen, lbSelectedUrl, lbSaving, lbVisible,
+  } = s;
+  const modalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ── All hooks must be called unconditionally before any early return ──
   const { data, isLoading } = useSWR<ProfileData>(
     user ? "profile" : null,
     () => getProfile(),
     { revalidateOnFocus: false }
   );
 
-  const [analysisPage, setAnalysisPage] = useState(1);
-  const [expanded, setExpanded]         = useState<SavedAnalysis | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [previewImg, setPreviewImg]     = useState<{ url: string; name: string } | null>(null);
-
-  // Username edit state
-  const [editingUsername, setEditingUsername] = useState(false);
-  const [newUsername,     setNewUsername]     = useState("");
-  const [unameStatus,     setUnameStatus]     = useState<"idle"|"checking"|"ok"|"taken"|"invalid">("idle");
-  const [unameSaving,     setUnameSaving]     = useState(false);
-  const [unameError,      setUnameError]      = useState<string|null>(null);
-
-  // Leaderboard rank
-  const [myRank, setMyRank] = useState<number | null>(null);
-
-  // Leaderboard avatar management
-  const [lbPickerOpen, setLbPickerOpen]     = useState(false);
-  const [lbSelectedUrl, setLbSelectedUrl]   = useState<string | null>(null);
-  const [lbSaving,      setLbSaving]        = useState(false);
-  const [lbVisible,     setLbVisible]       = useState(false);
-
-  // Slide-up when modal opens, slide-down before closing
+  // Slide-up when modal opens
   useEffect(() => {
-    if (expanded) {
-      requestAnimationFrame(() => setModalVisible(true));
-    }
+    if (expanded) requestAnimationFrame(() => set({ modalVisible: true }));
   }, [expanded]);
 
-  // Fetch user's leaderboard rank + visibility
+  // Fetch leaderboard rank + visibility
   useEffect(() => {
     if (!user?.username) return;
     fetch(`${siteUrl}/leaderboard`)
       .then((r) => r.json())
       .then((d: { data: Array<{ username: string; rank: number }> }) => {
         const found = d.data?.find((e) => e.username === user.username);
-        if (found) { setMyRank(found.rank); setLbVisible(true); }
-        else        { setLbVisible(false); }
+        set(found ? { myRank: found.rank, lbVisible: true } : { lbVisible: false });
       })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.username]);
 
-  // Debounce username availability check — all setState inside async callback
+  // Debounce username check
   useEffect(() => {
     const t = setTimeout(async () => {
-      if (!newUsername || newUsername.length < 3) { setUnameStatus("idle"); return; }
-      if (!/^[a-zA-Z0-9_]{3,20}$/.test(newUsername)) { setUnameStatus("invalid"); return; }
-      setUnameStatus("checking");
+      if (!newUsername || newUsername.length < 3) { set({ unameStatus: "idle" }); return; }
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(newUsername)) { set({ unameStatus: "invalid" }); return; }
+      set({ unameStatus: "checking" });
       try {
         const r = await fetch(`${siteUrl}/auth/check-username/${encodeURIComponent(newUsername)}`, {
           headers: { Authorization: `Bearer ${tokenStore.get()}` },
         });
         const d = await r.json();
-        setUnameStatus(d.available ? "ok" : "taken");
-      } catch { setUnameStatus("idle"); }
+        set({ unameStatus: d.available ? "ok" : "taken" });
+      } catch { set({ unameStatus: "idle" }); }
     }, 300);
     return () => clearTimeout(t);
   }, [newUsername]);
 
   async function saveUsername() {
     if (unameStatus !== "ok") return;
-    setUnameSaving(true); setUnameError(null);
+    set({ unameSaving: true, unameError: null });
     try {
       const r = await fetch(`${siteUrl}/auth/username`, {
         method:  "POST",
@@ -109,33 +120,30 @@ export default function ProfilePage() {
         body:    JSON.stringify({ username: newUsername }),
       });
       const d = await r.json();
-      if (!r.ok) { setUnameError(d.error ?? "Алдаа гарлаа"); return; }
-      setEditingUsername(false);
-      setNewUsername("");
-      window.location.reload(); // refresh to show new username
-    } catch { setUnameError("Алдаа гарлаа"); }
-    finally { setUnameSaving(false); }
+      if (!r.ok) { set({ unameError: d.error ?? "Алдаа гарлаа", unameSaving: false }); return; }
+      set({ editingUsername: false, newUsername: "", unameSaving: false });
+      window.location.reload();
+    } catch { set({ unameError: "Алдаа гарлаа", unameSaving: false }); }
   }
 
   async function saveLbSettings(show: boolean, avatarUrl?: string) {
-    setLbSaving(true);
+    set({ lbSaving: true });
     try {
       await fetch(`${siteUrl}/auth/leaderboard-consent`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenStore.get()}` },
         body:    JSON.stringify({ show, avatarUrl }),
       });
-      setLbVisible(show);
-      if (!show) setMyRank(null);
-      setLbPickerOpen(false);
-      refreshUser();   // lookScore + user state-г server-аас дахин татна
+      set({ lbVisible: show, lbPickerOpen: false, ...(!show ? { myRank: null } : {}) });
+      refreshUser();
     } catch { /* ignore */ }
-    finally { setLbSaving(false); }
+    finally { set({ lbSaving: false }); }
   }
 
   function closeModal() {
-    setModalVisible(false);
-    setTimeout(() => setExpanded(null), 300); // wait for slide-down
+    set({ modalVisible: false });
+    if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+    modalTimerRef.current = setTimeout(() => set({ expanded: null }), 300);
   }
 
   const { data: analysesData, isLoading: analysesLoading } = useSWR(
@@ -249,7 +257,7 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     value={newUsername}
-                    onChange={(e) => setNewUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20))}
+                    onChange={(e) => set({ newUsername: e.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20) })}
                     placeholder="username"
                     className="w-full pl-8 pr-8 py-2.5 rounded-xl text-[0.85rem] font-semibold text-[#1c1c1e] outline-none"
                     style={{ background: "rgba(147,51,234,0.04)", border: `1.5px solid ${unameStatus === "ok" ? "#16a34a" : unameStatus === "taken" || unameStatus === "invalid" ? "#ef4444" : "rgba(147,51,234,0.2)"}` }}
@@ -258,7 +266,7 @@ export default function ProfilePage() {
                 </div>
                 {unameError && <p className="text-[0.72rem] text-red-500">{unameError}</p>}
                 <div className="flex gap-2">
-                  <button onClick={() => { setEditingUsername(false); setUnameError(null); }}
+                  <button onClick={() => set({ editingUsername: false, unameError: null })}
                     className="flex-1 py-2 rounded-full text-[0.78rem] font-semibold border border-[rgba(0,0,0,0.1)] text-[#6e6e73] cursor-pointer bg-transparent">Болих</button>
                   <button onClick={saveUsername} disabled={unameStatus !== "ok" || unameSaving}
                     className="flex-1 py-2 rounded-full text-[0.78rem] font-extrabold text-white border-none cursor-pointer disabled:opacity-40"
@@ -384,7 +392,7 @@ export default function ProfilePage() {
                   {/* Toggle */}
                   <button
                     type="button"
-                    onClick={() => lbVisible ? saveLbSettings(false) : setLbPickerOpen(true)}
+                    onClick={() => lbVisible ? saveLbSettings(false) : set({ lbPickerOpen: true })}
                     disabled={lbSaving}
                     className="relative w-11 h-6 rounded-full border-none cursor-pointer transition-all disabled:opacity-50 shrink-0"
                     style={{ background: lbVisible ? "linear-gradient(270deg,#9333ea,#7c3aed)" : "rgba(0,0,0,0.12)" }}
@@ -397,7 +405,7 @@ export default function ProfilePage() {
                 {lbVisible && !lbPickerOpen && (
                   <button
                     type="button"
-                    onClick={() => { setLbPickerOpen(true); setLbSelectedUrl(user.avatarUrl ?? null); }}
+                    onClick={() => set({ lbPickerOpen: true, lbSelectedUrl: user.avatarUrl ?? null })}
                     className="w-full py-2 rounded-xl text-[0.78rem] font-semibold border border-[rgba(147,51,234,0.2)] text-[#9333ea] bg-[rgba(147,51,234,0.04)] cursor-pointer hover:bg-[rgba(147,51,234,0.08)] transition-all"
                   >
                     🖼 Харуулах зураг солих
@@ -432,7 +440,7 @@ export default function ProfilePage() {
                             <button
                               key={look.imageUrl}
                               type="button"
-                              onClick={() => setLbSelectedUrl(look.imageUrl)}
+                              onClick={() => set({ lbSelectedUrl: look.imageUrl })}
                               className="relative rounded-xl overflow-hidden cursor-pointer border-none p-0"
                               style={{
                                 aspectRatio: "3/4",
@@ -457,7 +465,7 @@ export default function ProfilePage() {
                         </div>
                       )}
                       <div className="flex gap-2">
-                        <button onClick={() => setLbPickerOpen(false)}
+                        <button onClick={() => set({ lbPickerOpen: false })}
                           className="flex-1 py-2 rounded-full text-[0.78rem] font-semibold border border-[rgba(0,0,0,0.1)] text-[#6e6e73] cursor-pointer bg-transparent">
                           Болих
                         </button>
@@ -478,7 +486,7 @@ export default function ProfilePage() {
             {/* Username edit */}
             {!editingUsername ? (
               <button
-                onClick={() => { setEditingUsername(true); setNewUsername(user?.username ?? ""); }}
+                onClick={() => set({ editingUsername: true, newUsername: user?.username ?? "" })}
                 className="w-full py-2.5 rounded-full text-[0.82rem] font-semibold border border-[rgba(0,0,0,0.1)] text-[#6e6e73] bg-transparent cursor-pointer hover:bg-[rgba(0,0,0,0.02)] transition-all"
               >
                 {user?.username ? "✏️ Хэрэглэгчийн нэр солих" : "➕ Хэрэглэгчийн нэр үүсгэх"}
@@ -490,7 +498,7 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     value={newUsername}
-                    onChange={(e) => setNewUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20))}
+                    onChange={(e) => set({ newUsername: e.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20) })}
                     placeholder="username"
                     className="w-full pl-8 pr-8 py-2.5 rounded-xl text-[0.85rem] font-semibold text-[#1c1c1e] outline-none transition-all"
                     style={{
@@ -509,7 +517,7 @@ export default function ProfilePage() {
                 </p>
                 {unameError && <p className="text-[0.75rem] text-red-500">{unameError}</p>}
                 <div className="flex gap-2">
-                  <button onClick={() => { setEditingUsername(false); setUnameError(null); }}
+                  <button onClick={() => set({ editingUsername: false, unameError: null })}
                     className="flex-1 py-2 rounded-full text-[0.8rem] font-semibold border border-[rgba(0,0,0,0.1)] text-[#6e6e73] cursor-pointer bg-transparent">
                     Болих
                   </button>
@@ -575,7 +583,7 @@ export default function ProfilePage() {
                           <button
                             key={l.name}
                             type="button"
-                            onClick={() => setPreviewImg({ url: l.imageUrl, name: l.name })}
+                            onClick={() => set({ previewImg: { url: l.imageUrl, name: l.name } })}
                             className="aspect-square rounded-lg overflow-hidden bg-[#f5f5f7] cursor-pointer border-none p-0 relative group"
                             title={l.name}
                           >
@@ -595,7 +603,7 @@ export default function ProfilePage() {
                   {/* Buttons */}
                   <div className="mx-4 mb-3 mt-1 flex gap-2">
                     <button
-                      onClick={() => setExpanded(a)}
+                      onClick={() => set({ expanded: a })}
                       className="flex-1 py-[9px] rounded-full text-[0.8rem] font-semibold border border-[rgba(0,0,0,0.1)] text-[#6e6e73] cursor-pointer bg-transparent hover:bg-[rgba(0,0,0,0.03)] transition-all"
                     >
                       Дэлгэрэнгүй харах →
@@ -611,13 +619,13 @@ export default function ProfilePage() {
             {(analysesData?.pages ?? 0) > 1 && (
               <div className="flex justify-center gap-3 mt-6">
                 <button disabled={analysisPage <= 1}
-                  onClick={() => setAnalysisPage((p) => p - 1)}
+                  onClick={() => set({ analysisPage: analysisPage - 1 })}
                   className="px-4 py-2 rounded-full border border-[rgba(0,0,0,0.1)] text-[0.82rem] text-[#6e6e73] cursor-pointer disabled:opacity-30">
                   ← Өмнөх
                 </button>
                 <span className="flex items-center text-[0.82rem] text-[#8e8e93]">{analysisPage} / {analysesData?.pages}</span>
                 <button disabled={analysisPage >= (analysesData?.pages ?? 1)}
-                  onClick={() => setAnalysisPage((p) => p + 1)}
+                  onClick={() => set({ analysisPage: analysisPage + 1 })}
                   className="px-4 py-2 rounded-full border border-[rgba(0,0,0,0.1)] text-[0.82rem] text-[#6e6e73] cursor-pointer disabled:opacity-30">
                   Дараах →
                 </button>
@@ -820,7 +828,7 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-2 gap-3">
                     {expanded.looks.map((l: { name: string; imageUrl: string }) => (
                       <button key={l.name} type="button"
-                        onClick={() => setPreviewImg({ url: l.imageUrl, name: l.name })}
+                        onClick={() => set({ previewImg: { url: l.imageUrl, name: l.name } })}
                         className="relative rounded-xl overflow-hidden bg-[#f5f5f7] cursor-pointer border-none p-0 group"
                         style={{ aspectRatio: "3/4" }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -844,12 +852,12 @@ export default function ProfilePage() {
       {previewImg && (
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-          onClick={() => setPreviewImg(null)}
+          onClick={() => set({ previewImg: null })}
         >
           <div className="relative max-w-[500px] w-full" onClick={(e) => e.stopPropagation()}>
             {/* Close */}
             <button
-              onClick={() => setPreviewImg(null)}
+              onClick={() => set({ previewImg: null })}
               className="absolute -top-10 right-0 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 text-white border-none cursor-pointer text-lg hover:bg-white/20 transition-all z-10"
             >
               ×

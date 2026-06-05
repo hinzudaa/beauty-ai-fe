@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useReducer, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { runFullAnalysis, generateLooks, FullAnalysisResult, GeneratedLook } from "@/apis/analyze";
 import { uploadSelfie } from "@/apis/upload";
@@ -11,18 +11,63 @@ import { getPrices } from "@/apis/prices";
 import { tokenStore } from "@/utils/request";
 import { photoStore } from "@/utils/photoStore";
 import { resultStore } from "@/utils/resultStore";
-import { appUrl } from "@/config/site";
+import { appUrl, siteUrl } from "@/config/site";
 import ShareButton from "@/components/ShareButton";
 import LoadingScreen from "@/components/LoadingScreen";
 import LeaderboardConsent from "@/components/LeaderboardConsent";
 import { useAuth } from "@/lib/AuthContext";
 
-/**
- * Step order:
- *   checking → (no sub) subscribe → payment → upload → occasion → analyzing → result
- *   checking → (has sub)                       upload → occasion → analyzing → result
- */
 type Step = "checking" | "subscribe" | "payment" | "upload" | "occasion" | "analyzing" | "result" | "limitReached";
+
+// ── Single state object + patch reducer ─────────────────────────
+// 20 useState → 1 useReducer: related updates batch into ONE render
+type State = {
+  step:            Step;
+  notLoggedIn:     boolean;
+  selectedPlan:    "basic" | "standard" | "pro" | null;
+  preview:         string | null;
+  photoUrl:        string | null;
+  uploading:       boolean;
+  occasion:        string;
+  invoice:         InvoiceResponse | null;
+  error:           string | null;
+  profile:         ProfileData | null;
+  result:          FullAnalysisResult | null;
+  activeTab:       "hair" | "outfit";
+  prices:          { basic: number; standard: number; pro: number };
+  generatedLooks:  GeneratedLook[];
+  generatingLooks: boolean;
+  showLbConsent:   boolean;
+  upgradeInfo:     UpgradePrice | null;
+  proInvoice:      InvoiceResponse | null;
+  proPayState:     "idle" | "creating" | "waiting" | "success";
+};
+
+const INITIAL: State = {
+  step:            "checking",
+  notLoggedIn:     false,
+  selectedPlan:    null,
+  preview:         null,
+  photoUrl:        null,
+  uploading:       false,
+  occasion:        "interview",
+  invoice:         null,
+  error:           null,
+  profile:         null,
+  result:          null,
+  activeTab:       "hair",
+  prices:          { basic: 19900, standard: 34900, pro: 59900 },
+  generatedLooks:  [],
+  generatingLooks: false,
+  showLbConsent:   false,
+  upgradeInfo:     null,
+  proInvoice:      null,
+  proPayState:     "idle",
+};
+
+function patchReducer(prev: State, next: Partial<State>): State {
+  return { ...prev, ...next };
+}
 
 const OCCASIONS = [
   { id: "interview", label: "Ажлын ярилцлага", icon: "💼", sub: "Professional" },
@@ -77,150 +122,128 @@ const PLAN_META = [
 ];
 
 export default function AnalyzePage() {
-  // SSR-safe: both server and client start with "checking" so tree always matches
-  const [step, setStep]               = useState<Step>("checking");
-  const [notLoggedIn, setNotLoggedIn] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<"basic" | "standard" | "pro" | null>(null);
+  const [s, set] = useReducer(patchReducer, INITIAL);
+  // Destructure for JSX compatibility — no template changes needed
+  const {
+    step, notLoggedIn, selectedPlan, preview, photoUrl, uploading,
+    occasion, invoice, error, profile, result, activeTab, prices,
+    generatedLooks, generatingLooks, showLbConsent, upgradeInfo,
+    proInvoice, proPayState,
+  } = s;
 
-  const [preview, setPreview]   = useState<string | null>(null);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [occasion, setOccasion]   = useState("interview");
-  const [invoice, setInvoice]     = useState<InvoiceResponse | null>(null);
-  const [error, setError]         = useState<string | null>(null);
-  const [profile, setProfile]     = useState<ProfileData | null>(null);
-  const [result, setResult]       = useState<FullAnalysisResult | null>(null);
-  const [activeTab, setActiveTab] = useState<"hair" | "outfit">("hair");
-  const [prices, setPrices]       = useState({ basic: 19900, standard: 34900, pro: 59900 });
-  const [generatedLooks, setGeneratedLooks]     = useState<GeneratedLook[]>([]);
-  const [generatingLooks, setGeneratingLooks]   = useState(false);
-  const [showLbConsent, setShowLbConsent]       = useState(false);
-  const [upgradeInfo, setUpgradeInfo]           = useState<UpgradePrice | null>(null);
-  const [proInvoice, setProInvoice]           = useState<InvoiceResponse | null>(null);
-  const [proPayState, setProPayState]         = useState<"idle" | "creating" | "waiting" | "success">("idle");
-  const router      = useRouter();
-  const inputRef    = useRef<HTMLInputElement>(null);
-  const { user }    = useAuth();
+  const router     = useRouter();
+  const inputRef   = useRef<HTMLInputElement>(null);
+  const { user }   = useAuth();
+  // Refs for timers — mutable, no render needed
+  const payPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const proPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* ── Cleanup all timers on unmount ── */
+  useEffect(() => () => {
+    if (payPollRef.current)  clearInterval(payPollRef.current);
+    if (proPollRef.current)  clearInterval(proPollRef.current);
+    if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+  }, []);
 
   /* ── On mount: read browser APIs, then fetch profile ── */
   useEffect(() => {
-    const token = tokenStore.get();
-    const saved  = photoStore.get();
+    const token    = tokenStore.get();
+    const saved    = photoStore.get();
     const planParam = new URLSearchParams(window.location.search).get("plan");
 
     if (!token) {
-      // Batch all sync state into one async-style callback via queueMicrotask
-      queueMicrotask(() => {
-        setNotLoggedIn(true);
-        setSelectedPlan(planParam === "basic" || planParam === "pro" ? planParam : null);
-        setStep("subscribe");
-      });
+      queueMicrotask(() => set({
+        notLoggedIn:  true,
+        selectedPlan: planParam === "basic" || planParam === "pro" ? planParam : null,
+        step:         "subscribe",
+      }));
       return;
     }
 
     getProfile()
       .then((p) => {
-        // All state updates happen inside an async callback — no ESLint warning
-        setProfile(p);
-        if (saved?.preview) setPreview(saved.preview);
-        if (planParam === "basic" || planParam === "pro") setSelectedPlan(planParam);
         const sub = p.subscription;
-        if (sub?.status !== "active") { setStep("subscribe"); return; }
-        if (sub.monthlyUsage >= sub.usageLimit) { setStep("limitReached"); return; }
+        if (sub?.status !== "active") { set({ profile: p, step: "subscribe" }); return; }
+        if (sub.monthlyUsage >= sub.usageLimit) { set({ profile: p, step: "limitReached" }); return; }
 
-        // ── Hard-refresh recovery ────────────────────────────
-        // If the user refreshed while looks were generating, restore result
-        // and jump back to the result step — the recovery useEffect handles the rest
+        // Hard-refresh recovery
         const savedResult = resultStore.getResult();
         const savedPhoto  = resultStore.getPhotoUrl();
         if (savedResult) {
-          setResult(savedResult);
-          setActiveTab("hair");
-          if (savedPhoto) setPhotoUrl(savedPhoto);
-          setStep("result");
+          set({ profile: p, result: savedResult, activeTab: "hair",
+                photoUrl: savedPhoto ?? null, step: "result",
+                ...(planParam === "basic" || planParam === "pro" ? { selectedPlan: planParam } : {}) });
           return;
         }
 
-        setStep(saved?.preview ? "occasion" : "upload");
+        set({
+          profile:     p,
+          preview:     saved?.preview ?? null,
+          step:        saved?.preview ? "occasion" : "upload",
+          ...(planParam === "basic" || planParam === "pro" ? { selectedPlan: planParam } : {}),
+        });
       })
-      .catch(() => setStep("subscribe"));
+      .catch(() => set({ step: "subscribe" }));
 
     getPrices()
-      .then((p) => setPrices({ basic: p.basicPrice, standard: p.standardPrice ?? 34900, pro: p.proPrice }))
+      .then((p) => set({ prices: { basic: p.basicPrice, standard: p.standardPrice ?? 34900, pro: p.proPrice } }))
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch upgrade price when a plan is selected and user is authenticated
-  // Note: when selectedPlan is null or user is not logged in, upgradeInfo stays null
-  // (set to null by lazy initializer — no synchronous setState in effect)
+  /* ── Upgrade price — fires only when plan is selected ── */
   useEffect(() => {
     if (!selectedPlan || notLoggedIn || !tokenStore.get()) return;
     let cancelled = false;
     getUpgradePrice(selectedPlan)
-      .then((p) => { if (!cancelled) setUpgradeInfo(p); })
-      .catch(() => { if (!cancelled) setUpgradeInfo(null); });
+      .then((p) => { if (!cancelled) set({ upgradeInfo: p }); })
+      .catch(() => { if (!cancelled) set({ upgradeInfo: null }); });
     return () => { cancelled = true; };
   }, [selectedPlan, notLoggedIn]);
 
-  /* ── Warn user before leaving while looks are generating ── */
+  /* ── Warn before leaving while generating ── */
   useEffect(() => {
     if (!generatingLooks) return;
-    function onBeforeUnload(e: BeforeUnloadEvent) {
+    const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = "Зураг үүсгэж байна. Хуудсыг орхивол үр дүн алдагдаж болно.";
-    }
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
   }, [generatingLooks]);
 
-  /* ── On result mount: recover existing looks if user refreshed mid-generation ── */
+  /* ── Recovery: restore looks on hard-refresh ── */
   useEffect(() => {
     if (step !== "result" || !result?.analysisId || generatedLooks.length > 0 || generatingLooks) return;
 
     const id = result.analysisId;
+    set({ generatingLooks: true });
 
-    // Step 1: Check DB — setGeneratingLooks inside async callback to avoid ESLint warning
-    import("@/apis/analyze").then(async ({ generateLooks: gl }) => {
-      setGeneratingLooks(true);
+    async function pollUntilReady() {
       try {
-        const { siteUrl } = await import("@/config/site");
+        const r = await fetch(`${siteUrl}/analyze/result/${id}`);
+        if (r.ok) {
+          const d = await r.json();
+          if (d.looks?.length > 0) { set({ generatedLooks: d.looks, generatingLooks: false }); return; }
+        }
+      } catch { /* keep polling */ }
+      pollTimerRef.current = setTimeout(pollUntilReady, 5000);
+    }
+
+    (async () => {
+      try {
         const res = await fetch(`${siteUrl}/analyze/result/${id}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.looks && data.looks.length > 0) {
-            // Looks already in DB — no need to re-generate
-            setGeneratedLooks(data.looks);
-            setGeneratingLooks(false);
-            return;
-          }
+          if (data.looks?.length > 0) { set({ generatedLooks: data.looks, generatingLooks: false }); return; }
         }
       } catch { /* fall through to generate */ }
 
-      // Step 2: Looks not in DB — try generate-looks
-      // Server returns 202 if already generating (lock held) → poll DB instead
-      if (!result.analysis) { setGeneratingLooks(false); return; }
+      if (!result.analysis) { set({ generatingLooks: false }); return; }
 
-      let pollTimer: ReturnType<typeof setTimeout>;
-      async function pollUntilReady() {
-        try {
-          const { siteUrl: su } = await import("@/config/site");
-          const r = await fetch(`${su}/analyze/result/${id}`);
-          if (r.ok) {
-            const d = await r.json();
-            if (d.looks && d.looks.length > 0) {
-              setGeneratedLooks(d.looks);
-              setGeneratingLooks(false);
-              return;
-            }
-          }
-        } catch { /* keep polling */ }
-        pollTimer = setTimeout(pollUntilReady, 5000);
-      }
-
-      gl(
-        photoUrl ?? "",
-        id,
+      generateLooks(
+        photoUrl ?? "", id,
         {
           gender:              result.analysis.gender,
           faceShape:           result.analysis.faceShape,
@@ -232,36 +255,26 @@ export default function AnalyzePage() {
         },
         result.occasion ?? "casual"
       )
-        .then(({ looks }) => { setGeneratedLooks(looks); setGeneratingLooks(false); })
+        .then(({ looks }) => set({ generatedLooks: looks, generatingLooks: false }))
         .catch((err) => {
-          // 202 means server is generating — poll DB every 5s
-          if (err?.status === 202 || err?.message?.includes("202")) {
-            pollUntilReady();
-          } else {
-            setGeneratingLooks(false);
-          }
+          if (err?.status === 202 || err?.message?.includes("202")) pollUntilReady();
+          else set({ generatingLooks: false });
         });
-    });
+    })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, result?.analysisId]);
 
-  /* ── File select: show preview immediately, upload to R2 in background ── */
+  /* ── File select ── */
   async function handleFile(file: File) {
-    setPreview(URL.createObjectURL(file));
-    setPhotoUrl(null);
-    setError(null); setResult(null);
-    setUploading(true);
-    setStep("occasion");
-
+    set({ preview: URL.createObjectURL(file), photoUrl: null, error: null,
+          result: null, uploading: true, step: "occasion" });
     try {
       const { url } = await uploadSelfie(file);
-      setPhotoUrl(url);
-      resultStore.setPhotoUrl(url);   // persist for hard-refresh recovery
+      set({ photoUrl: url, uploading: false });
+      resultStore.setPhotoUrl(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Зураг хуулахад алдаа гарлаа");
-      setStep("upload");
-    } finally {
-      setUploading(false);
+      set({ error: err instanceof Error ? err.message : "Зураг хуулахад алдаа гарлаа",
+            uploading: false, step: "upload" });
     }
   }
 
@@ -269,122 +282,100 @@ export default function AnalyzePage() {
   async function handleSubscribe() {
     if (!selectedPlan) return;
     if (!tokenStore.get()) {
-      // Not logged in → redirect to login, come back here with plan pre-selected
       router.push(`/login?next=${encodeURIComponent(window.location.pathname + (window.location.search || `?plan=${selectedPlan}`))}`);
       return;
     }
-    setError(null);
+    set({ error: null });
     try {
       const inv = await createSubscriptionInvoice(selectedPlan);
-      setInvoice(inv);
-      setStep("payment");
-      pollPayment(inv.invoiceId);
+      set({ invoice: inv, step: "payment" });
+      // Store timer in ref so it can be cleared on unmount
+      if (payPollRef.current) clearInterval(payPollRef.current);
+      payPollRef.current = setInterval(async () => {
+        try {
+          const status = await checkPayment(inv.invoiceId);
+          if (status.paid) {
+            clearInterval(payPollRef.current!);
+            payPollRef.current = null;
+            set({ step: "upload" });
+          }
+        } catch { /* keep polling */ }
+      }, 3000);
+      setTimeout(() => {
+        if (payPollRef.current) { clearInterval(payPollRef.current); payPollRef.current = null; }
+      }, 10 * 60 * 1000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Алдаа гарлаа");
+      set({ error: err instanceof Error ? err.message : "Алдаа гарлаа" });
     }
   }
 
-  /* ── Poll QPay until paid → go to upload ── */
-  function pollPayment(invoiceId: string) {
-    let cancelled = false;
-    const timer = setInterval(async () => {
-      if (cancelled) return;
-      try {
-        const s = await checkPayment(invoiceId);
-        if (s.paid) {
-          clearInterval(timer);
-          if (!cancelled) setStep("upload");   // always go to upload after subscribing
-        }
-      } catch { /* keep polling */ }
-    }, 3000);
-    setTimeout(() => { cancelled = true; clearInterval(timer); }, 10 * 60 * 1000);
-  }
-
-  /* ── GPT-4o looksmaxxing analysis, then DALL-E look images in background ── */
+  /* ── Main analysis + look generation ── */
   const runAll = useCallback(async () => {
-    if (!photoUrl) {
-      setError("Зураг хуулж дуусаагүй байна, хүлээнэ үү..."); return;
-    }
-    setStep("analyzing"); setError(null);
+    if (!photoUrl) { set({ error: "Зураг хуулж дуусаагүй байна, хүлээнэ үү..." }); return; }
+    set({ step: "analyzing", error: null });
     try {
       const r = await runFullAnalysis(photoUrl, occasion);
-      setResult(r); setActiveTab("hair"); setStep("result");
-      resultStore.setResult(r);   // persist for hard-refresh recovery
+      set({ result: r, activeTab: "hair", step: "result",
+            generatedLooks: [], generatingLooks: true });
+      resultStore.setResult(r);
 
-      // fal.ai InstantID look generation — both Basic (2 img) and Pro (5 img)
-      setGeneratedLooks([]); setGeneratingLooks(true);
-      generateLooks(
-        photoUrl,
-        r.analysisId,
-        {
-          gender:              r.analysis.gender,
-          faceShape:           r.analysis.faceShape,
-          skinTone:            r.analysis.skinTone,
-          lookmaxScore:        r.analysis.lookmaxScore,
-          hairRecommendations: r.analysis.hairRecommendations ?? [],
-          outfitStyle:         r.analysis.outfitStyle,
-          colorPalette:        r.analysis.colorPalette ?? [],
-        },
-        occasion
-      )
+      generateLooks(photoUrl, r.analysisId, {
+        gender:              r.analysis.gender,
+        faceShape:           r.analysis.faceShape,
+        skinTone:            r.analysis.skinTone,
+        lookmaxScore:        r.analysis.lookmaxScore,
+        hairRecommendations: r.analysis.hairRecommendations ?? [],
+        outfitStyle:         r.analysis.outfitStyle,
+        colorPalette:        r.analysis.colorPalette ?? [],
+      }, occasion)
         .then(({ looks }) => {
-          setGeneratedLooks(looks);
-          resultStore.clear();   // looks done — no longer need recovery data
-          // Show leaderboard consent ONLY if:
-          // 1. Looks generated successfully
-          // 2. New score is HIGHER than existing score (improvement)
-          if (looks.length > 0) {
-            const newScore   = Math.round((r.analysis.lookmaxScore ?? 0) * 10 * 1000) / 1000;
-            const prevScore  = user?.lookScore ?? 0;
-            if (newScore > prevScore) {
-              setShowLbConsent(true);
-            }
-          }
+          resultStore.clear();
+          const newScore = Math.round((r.analysis.lookmaxScore ?? 0) * 10 * 1000) / 1000;
+          set({ generatedLooks: looks, generatingLooks: false,
+                showLbConsent: looks.length > 0 && newScore > (user?.lookScore ?? 0) });
         })
-        .catch(() => { /* images optional — analysis already shown */ })
-        .finally(() => setGeneratingLooks(false));
+        .catch(() => set({ generatingLooks: false }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Алдаа гарлаа";
-      if (msg === "needsSubscription")   { setStep("subscribe");    }
+      if (msg === "needsSubscription") { set({ step: "subscribe" }); }
       else if (msg === "usageLimitReached") {
-        // Refresh profile to get latest usage count, then show limit screen
-        getProfile().then(setProfile).catch(() => {});
-        setStep("limitReached");
+        getProfile().then((p) => set({ profile: p, step: "limitReached" })).catch(() => set({ step: "limitReached" }));
       }
-      else { setError(msg); setStep("occasion"); }
+      else { set({ error: msg, step: "occasion" }); }
     }
-  }, [photoUrl, occasion]);
+  }, [photoUrl, occasion, user?.lookScore]);
 
+  /* ── Pro upgrade ── */
   async function handleProUpgrade() {
     if (!tokenStore.get()) { router.push("/login"); return; }
-    setProPayState("creating");
+    set({ proPayState: "creating" });
     try {
       const inv = await createSubscriptionInvoice("pro");
-      setProInvoice(inv);
-      setProPayState("waiting");
-
-      const timer = setInterval(async () => {
+      set({ proInvoice: inv, proPayState: "waiting" });
+      if (proPollRef.current) clearInterval(proPollRef.current);
+      proPollRef.current = setInterval(async () => {
         try {
-          const s = await checkPayment(inv.invoiceId);
-          if (s.paid) {
-            clearInterval(timer);
-            setProPayState("success");
+          const status = await checkPayment(inv.invoiceId);
+          if (status.paid) {
+            clearInterval(proPollRef.current!);
+            proPollRef.current = null;
+            set({ proPayState: "success" });
             setTimeout(() => router.push("/"), 2000);
           }
         } catch { /* keep polling */ }
       }, 3000);
-      setTimeout(() => { clearInterval(timer); setProPayState("idle"); }, 15 * 60 * 1000);
+      setTimeout(() => {
+        if (proPollRef.current) { clearInterval(proPollRef.current); proPollRef.current = null; set({ proPayState: "idle" }); }
+      }, 15 * 60 * 1000);
     } catch (err) {
-      setProPayState("idle");
-      setError(err instanceof Error ? err.message : "Алдаа гарлаа");
+      set({ proPayState: "idle", error: err instanceof Error ? err.message : "Алдаа гарлаа" });
     }
   }
 
   function resetToUpload() {
-    setPreview(null); setPhotoUrl(null); setResult(null); setError(null);
-    setGeneratedLooks([]); setGeneratingLooks(false);
     resultStore.clear();
-    setStep("upload");
+    set({ preview: null, photoUrl: null, result: null, error: null,
+          generatedLooks: [], generatingLooks: false, step: "upload" });
   }
 
   /* ─────────────────── UI ─────────────────── */
@@ -445,7 +436,7 @@ export default function AnalyzePage() {
             {/* Plan cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {PLAN_META.map((plan) => (
-                <button key={plan.id} onClick={() => setSelectedPlan(plan.id)}
+                <button key={plan.id} onClick={() => set({ selectedPlan: plan.id })}
                   className="p-6 rounded-[22px] text-left transition-all relative overflow-hidden cursor-pointer"
                   style={{
                     background:  selectedPlan === plan.id ? (plan.highlight ? "#1c1c1e" : `${plan.color}08`) : "#fff",
@@ -589,7 +580,7 @@ export default function AnalyzePage() {
                 </div>
               )}
             </div>
-            <button onClick={() => setStep("subscribe")}
+            <button onClick={() => set({ step: "subscribe" })}
               className="w-full mt-3 py-3 bg-transparent border border-[rgba(0,0,0,0.1)] rounded-full text-[0.85rem] text-[#8e8e93] cursor-pointer">
               ← Буцах
             </button>
@@ -672,7 +663,7 @@ export default function AnalyzePage() {
                     {uploading ? "Хуулж байна..." : "Нөхцлөө сонгоно уу"}
                   </p>
                 </div>
-                <button onClick={() => setStep("upload")}
+                <button onClick={() => set({ step: "upload" })}
                   className="text-[0.72rem] font-semibold px-3 py-1.5 rounded-full border-none cursor-pointer"
                   style={{ background: "rgba(147,51,234,0.08)", color: "#9333ea" }}>
                   Солих
@@ -685,7 +676,7 @@ export default function AnalyzePage() {
               {OCCASIONS.map((o) => {
                 const sel = occasion === o.id;
                 return (
-                  <button key={o.id} onClick={() => setOccasion(o.id)}
+                  <button key={o.id} onClick={() => set({ occasion: o.id })}
                     className="py-5 px-3 rounded-[20px] text-center cursor-pointer transition-all relative overflow-hidden"
                     style={{
                       background:  sel ? "linear-gradient(135deg, rgba(147,51,234,0.1), rgba(147,51,234,0.08))" : "rgba(255,255,255,0.7)",
@@ -773,7 +764,7 @@ export default function AnalyzePage() {
                     ⭐ Pro-д шилжиж сард 10 шинжилгээ авна уу
                   </p>
                   <p className="text-[0.75rem] text-[#6e6e73] mb-3">4 AI Look зураг + AI Стилист чат</p>
-                  <button onClick={() => { setSelectedPlan("pro"); setStep("subscribe"); }}
+                  <button onClick={() => { set({ selectedPlan: "pro", step: "subscribe" }); }}
                     className="w-full py-[11px] rounded-full font-bold text-[0.85rem] text-white border-none cursor-pointer"
                     style={{ background: "linear-gradient(135deg,#9333ea,#7c3aed)", boxShadow: "0 4px 20px rgba(147,51,234,0.35)" }}>
                     Pro-д upgrade хийх →
@@ -1076,7 +1067,7 @@ export default function AnalyzePage() {
 
             {/* Actions */}
             <div className="flex gap-3 flex-wrap">
-              <button onClick={() => setStep("occasion")}
+              <button onClick={() => set({ step: "occasion" })}
                 className="flex-1 min-w-[120px] py-[13px] bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] rounded-full font-bold text-[0.87rem] text-[#9333ea] cursor-pointer">
                 Дахин шинжлэх
               </button>
@@ -1098,14 +1089,14 @@ export default function AnalyzePage() {
           lookScore={result?.analysis?.lookmaxScore ? Math.round(result.analysis.lookmaxScore * 10 * 1000) / 1000 : 0}
           looks={generatedLooks}
           username={user?.username ?? null}
-          onClose={() => setShowLbConsent(false)}
+          onClose={() => set({ showLbConsent: false })}
         />
       )}
 
       {/* ── Pro upgrade QPay modal ── */}
       {(proPayState === "waiting" || proPayState === "success") && proInvoice && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 pt-[72px]"
-          onClick={(e) => { if (e.target === e.currentTarget && proPayState !== "success") setProPayState("idle"); }}>
+          onClick={(e) => { if (e.target === e.currentTarget && proPayState !== "success") set({ proPayState: "idle" }); }}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[4px]" />
           <div className="relative z-[1] w-full max-w-[400px] bg-white rounded-[24px] shadow-[0_24px_64px_rgba(0,0,0,0.18)] overflow-hidden flex flex-col max-h-[calc(100vh-88px)] anim-scale-in">
 
@@ -1122,7 +1113,7 @@ export default function AnalyzePage() {
               <>
                 {/* Fixed top */}
                 <div className="px-6 pt-6 pb-4 text-center shrink-0">
-                  <button onClick={() => setProPayState("idle")}
+                  <button onClick={() => set({ proPayState: "idle" })}
                     className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[rgba(0,0,0,0.06)] flex items-center justify-center text-[#6e6e73] cursor-pointer border-none text-[1.1rem] hover:bg-[rgba(0,0,0,0.1)] transition-all leading-none">
                     ×
                   </button>

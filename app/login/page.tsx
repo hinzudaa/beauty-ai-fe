@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useReducer, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -36,15 +36,27 @@ function extractSms(smsUri: string) {
   return { destination, code };
 }
 
+type LoginState = {
+  session: OtpStartResponse | null;
+  step: "phone" | "otp";
+  phone: string;
+  error: string;
+  busy: boolean;
+};
+
+function patchReducer(prev: LoginState, next: Partial<LoginState>): LoginState {
+  return { ...prev, ...next };
+}
+
 export default function LoginPage() {
   const { login } = useAuth();
   const router    = useRouter();
 
-  const [session, setSession] = useState<OtpStartResponse | null>(() => loadSession());
-  const [step,    setStep]    = useState<"phone" | "otp">(() => loadSession() ? "otp" : "phone");
-  const [phone,   setPhone]   = useState("");
-  const [error,   setError]   = useState("");
-  const [busy,    setBusy]    = useState(false);
+  const [s, set] = useReducer(patchReducer, undefined, (): LoginState => {
+    const saved = loadSession();
+    return { session: saved, step: saved ? "otp" : "phone", phone: "", error: "", busy: false };
+  });
+  const { session, step, phone, error, busy } = s;
 
   useEffect(() => {
     if (step !== "otp" || !session) return;
@@ -68,8 +80,7 @@ export default function LoginPage() {
         if (cancelled) return;
         if (err instanceof ApiError && (err.status === 404 || err.status === 410)) {
           saveSession(null);
-          setError("OTP хугацаа дууссан. Дахин оролдоно уу.");
-          setStep("phone"); setSession(null); return;
+          set({ error: "OTP хугацаа дууссан. Дахин оролдоно уу.", step: "phone", session: null }); return;
         }
       }
       if (!cancelled) timer = setTimeout(check, 2_000);
@@ -96,18 +107,18 @@ export default function LoginPage() {
   }, [step, session, login, router]);
 
   async function handleSend(e: React.FormEvent) {
-    e.preventDefault(); setError("");
-    if (!/^\d{8,16}$/.test(phone)) { setError("Утасны дугаар 8–16 оронтой байх ёстой"); return; }
-    setBusy(true);
+    e.preventDefault(); set({ error: "" });
+    if (!/^\d{8,16}$/.test(phone)) { set({ error: "Утасны дугаар 8–16 оронтой байх ёстой" }); return; }
+    set({ busy: true });
     try {
       const res = await otpStart(phone);
-      saveSession(res); setSession(res); setStep("otp");
+      saveSession(res); set({ session: res, step: "otp" });
     }
-    catch (err) { setError(err instanceof Error ? err.message : "Алдаа гарлаа"); }
-    finally { setBusy(false); }
+    catch (err) { set({ error: err instanceof Error ? err.message : "Алдаа гарлаа" }); }
+    finally { set({ busy: false }); }
   }
 
-  function handleRetry() { saveSession(null); setStep("phone"); setSession(null); setError(""); }
+  function handleRetry() { saveSession(null); set({ step: "phone", session: null, error: "" }); }
 
   const disabled = busy || !phone;
 
@@ -164,7 +175,7 @@ export default function LoginPage() {
                     <input
                       type="tel" inputMode="numeric" placeholder="9900 1234"
                       value={phone}
-                      onChange={(e) => { setPhone(e.target.value.replace(/\D/g, "")); setError(""); }}
+                      onChange={(e) => { set({ phone: e.target.value.replace(/\D/g, ""), error: "" }); }}
                       className="w-full pl-11 pr-5 py-4 rounded-[14px] text-[0.95rem] font-semibold text-[#1c1c1e]
                         bg-[#f5f5f7] border border-gray-500 outline-none transition-all
                         focus:border-purple-400 focus:bg-purple-50/50"

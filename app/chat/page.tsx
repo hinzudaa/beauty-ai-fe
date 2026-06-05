@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useReducer, useRef, useEffect } from "react";
 import Link from "next/link";
 import { siteUrl } from "@/config/site";
 import { tokenStore, ApiError } from "@/utils/request";
@@ -100,18 +100,32 @@ function ProGate({ reason }: { reason: "no-auth" | "no-pro" }) {
   );
 }
 
+/* ── State ─────────────────────────────────────────────────────── */
+type ChatState = {
+  authState: AuthState;
+  messages:  Message[];
+  input:     string;
+  loading:   boolean;
+};
+
+function patchReducer(prev: ChatState, next: Partial<ChatState>): ChatState {
+  return { ...prev, ...next };
+}
+
 /* ── Main chat UI (Pro only) ───────────────────────────────────── */
 export default function ChatPage() {
-  // Lazy initializer: if no token at all, skip straight to "no-auth" without an effect
-  const [authState, setAuthState] = useState<AuthState>(() =>
-    tokenStore.get() ? "loading" : "no-auth"
-  );
-  const [messages, setMessages]   = useState<Message[]>([
-    { role: "ai", text: "Сайн байна уу. Би таны хувийн AI Pro стилист. Хувцас, үс засал, грим — ямар ч асуулт асуугаарай." },
-  ]);
-  const [input, setInput]     = useState("");
-  const [loading, setLoading] = useState(false);
+  const [s, set] = useReducer(patchReducer, undefined, (): ChatState => ({
+    authState: tokenStore.get() ? "loading" : "no-auth",
+    messages: [{ role: "ai", text: "Сайн байна уу. Би таны хувийн AI Pro стилист. Хувцас, үс засал, грим — ямар ч асуулт асуугаарай." }],
+    input: "",
+    loading: false,
+  }));
+  const { authState, messages, input, loading } = s;
+  const messagesRef = useRef(s.messages);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Keep ref in sync with latest messages for use inside async send()
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   // Fetch profile only when we have a token (authState starts as "loading")
   useEffect(() => {
@@ -119,33 +133,29 @@ export default function ChatPage() {
     getProfile()
       .then((p) => {
         const isPro = p.subscription?.plan === "pro" && p.subscription?.status === "active";
-        setAuthState(isPro ? "ok" : "no-pro");
+        set({ authState: isPro ? "ok" : "no-pro" });
       })
-      .catch(() => setAuthState("no-auth"));
+      .catch(() => set({ authState: "no-auth" }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
 
-  function buildHistory() {
-    return messages.slice(-10).map((m) => ({
-      role:    m.role === "ai" ? "assistant" as const : "user" as const,
-      content: m.text,
-    }));
-  }
-
   async function send(text: string) {
     if (!text.trim() || loading) return;
-    setMessages((m) => [...m, { role: "user", text }]);
-    setInput("");
-    setLoading(true);
+    set({ messages: [...messagesRef.current, { role: "user", text }], input: "", loading: true });
+    const historySnapshot = [...messagesRef.current, { role: "user" as const, text }];
     try {
-      const reply = await fetchChatReply(text, buildHistory());
-      setMessages((m) => [...m, { role: "ai", text: reply }]);
+      const reply = await fetchChatReply(
+        text,
+        historySnapshot.slice(-10).map((m) => ({
+          role:    m.role === "ai" ? "assistant" as const : "user" as const,
+          content: m.text,
+        }))
+      );
+      set({ messages: [...messagesRef.current, { role: "ai", text: reply }], loading: false });
     } catch {
-      setMessages((m) => [...m, { role: "ai", text: "Уучлаарай, хариу боловсруулахад алдаа гарлаа. Дахин оролдоно уу." }]);
-    } finally {
-      setLoading(false);
+      set({ messages: [...messagesRef.current, { role: "ai", text: "Уучлаарай, хариу боловсруулахад алдаа гарлаа. Дахин оролдоно уу." }], loading: false });
     }
   }
 
@@ -236,7 +246,7 @@ export default function ChatPage() {
             <div className="flex gap-[10px]">
               <input
                 type="text" value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => set({ input: e.target.value })}
                 onKeyDown={(e) => e.key === "Enter" && send(input)}
                 placeholder="Асуултаа бич..."
                 className="flex-1 bg-white border border-[rgba(0,0,0,0.1)] rounded-[16px] px-5 py-[14px] text-[0.9rem] text-[#1c1c1e] outline-none shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
