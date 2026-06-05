@@ -79,7 +79,7 @@ export default function AnalyzePage() {
   const [profile, setProfile]     = useState<ProfileData | null>(null);
   const [result, setResult]       = useState<FullAnalysisResult | null>(null);
   const [activeTab, setActiveTab] = useState<"hair" | "outfit">("hair");
-  const [prices, setPrices]       = useState({ basic: 19900, pro: 39900 });
+  const [prices, setPrices]       = useState({ basic: 19900, pro: 59900 });
   const [generatedLooks, setGeneratedLooks]   = useState<GeneratedLook[]>([]);
   const [generatingLooks, setGeneratingLooks] = useState(false);
   const [upgradeInfo, setUpgradeInfo]         = useState<UpgradePrice | null>(null);

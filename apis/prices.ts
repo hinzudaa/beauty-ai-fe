@@ -6,7 +6,7 @@ export interface Prices {
   proPrice:      number;
 }
 
-const DEFAULTS: Prices = { basicPrice: 19900, standardPrice: 29900, proPrice: 39900 };
+const DEFAULTS: Prices = { basicPrice: 19900, standardPrice: 34900, proPrice: 59900 };
 
 /** Fetch current subscription prices from backend (no auth required) */
 export async function getPrices(): Promise<Prices> {
