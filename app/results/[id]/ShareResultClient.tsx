@@ -27,11 +27,24 @@ interface ResultData {
   createdAt: string;
 }
 
-function FacebookShareBtn({ url, label = "Facebook-т хуваалцах" }: { url: string; label?: string }) {
-  function share() {
-    const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
-    window.open(fbUrl, "_blank", "width=640,height=480,noopener,noreferrer");
+async function handleShare(url: string, title = "Looka AI — Миний looksmax үр дүн") {
+  // Mobile: native OS share sheet (works with FB, Instagram, Messenger, etc.)
+  if (typeof navigator !== "undefined" && navigator.share) {
+    try {
+      await navigator.share({ title, url });
+      return;
+    } catch { /* user cancelled or not supported */ }
   }
+  // Desktop fallback: Facebook sharer popup
+  window.open(
+    `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+    "_blank",
+    "width=640,height=480,noopener,noreferrer"
+  );
+}
+
+function FacebookShareBtn({ url, label = "Facebook-т хуваалцах" }: { url: string; label?: string }) {
+  function share() { handleShare(url); }
   return (
     <button
       onClick={share}

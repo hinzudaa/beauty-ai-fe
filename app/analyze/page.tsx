@@ -11,6 +11,7 @@ import { getPrices } from "@/apis/prices";
 import { tokenStore } from "@/utils/request";
 import { photoStore } from "@/utils/photoStore";
 import { appUrl } from "@/config/site";
+import ShareButton from "@/components/ShareButton";
 
 /**
  * Step order:
@@ -908,19 +909,7 @@ export default function AnalyzePage() {
               </button>
             </div>
                   {result?.analysisId && (
-                <button
-                  onClick={() => {
-                    const url = `${appUrl}/results/${result.analysisId}`;
-                    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, "_blank", "width=640,height=480,noopener");
-                  }}
-                  className="flex items-center gap-2 px-4 py-[13px] rounded-full font-bold text-[0.87rem] text-white justify-center cursor-pointer border-none shrink-0"
-                  style={{ background: "#1877F2", boxShadow: "0 3px 12px rgba(24,119,242,0.4)" }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                    <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073C0 18.1 4.388 23.094 10.125 24v-8.437H7.078v-3.49h3.047V9.41c0-3.025 1.791-4.697 4.533-4.697 1.312 0 2.686.236 2.686.236v2.97h-1.513c-1.491 0-1.956.93-1.956 1.886v2.267h3.328l-.532 3.49h-2.796V24C19.612 23.094 24 18.1 24 12.073z"/>
-                  </svg>
-                  Хуваалцах
-                </button>
+                <ShareButton url={`${appUrl}/results/${result.analysisId}`} />
               )}
           </div>
         )}
