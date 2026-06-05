@@ -30,7 +30,7 @@ function fmt(d: string) {
 }
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const router = useRouter();
 
   // ── All hooks must be called unconditionally before any early return ──
@@ -128,6 +128,7 @@ export default function ProfilePage() {
       setLbVisible(show);
       if (!show) setMyRank(null);
       setLbPickerOpen(false);
+      refreshUser();   // lookScore + user state-г server-аас дахин татна
     } catch { /* ignore */ }
     finally { setLbSaving(false); }
   }

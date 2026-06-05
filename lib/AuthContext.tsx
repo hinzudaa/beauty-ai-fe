@@ -12,6 +12,7 @@ interface AuthContextValue {
   loading: boolean;
   login: (token: string, user: IUser) => void;
   logout: () => void;
+  refreshUser: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextValue>({
   loading: true,
   login: () => {},
   logout: () => {},
+  refreshUser: () => {},
 });
 
 function subscribeToStorage(cb: () => void) {
@@ -61,8 +63,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setShowUsernameModal(false);
   };
 
+  const refreshUser = () => mutate();   // /auth/me дахин татаж user state шинэчилнэ
+
   return (
-    <AuthContext.Provider value={{ user: user ?? null, loading: isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user: user ?? null, loading: isLoading, login, logout, refreshUser }}>
       {children}
       {showUsernameModal && (
         <UsernameModal onDone={(username) => {
