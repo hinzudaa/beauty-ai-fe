@@ -412,7 +412,7 @@ export default function ProfilePage() {
                     .flatMap((a) =>
                       a.looks.map((l: { name: string; imageUrl: string }) => ({
                         ...l,
-                        score: (a.analysis.lookmaxScore * 10).toFixed(2),
+                        score: (a.analysis.lookmaxScore * 10).toFixed(3),
                       }))
                     );
 
@@ -555,7 +555,7 @@ export default function ProfilePage() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={a.photoUrl} alt="selfie" className="w-full h-full object-cover object-center" />
                     <div className="absolute top-2 right-2 bg-[#1c1c1e] text-white text-[0.7rem] font-extrabold px-2 py-1 rounded-lg">
-                      {(a.analysis.lookmaxScore * 10).toFixed(2)}/100
+                      {(a.analysis.lookmaxScore * 10).toFixed(3)}/100
                     </div>
                     <div className="absolute bottom-0 left-0 right-0 px-3 pb-2 pt-6"
                       style={{ background: "linear-gradient(to top,rgba(0,0,0,0.65),transparent)" }}>
@@ -647,9 +647,9 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(0,0,0,0.06)] shrink-0">
               <div>
                 <p className="text-[0.72rem] font-bold text-[#9333ea] uppercase tracking-[0.08em]">Дэлгэрэнгүй үр дүн</p>
-                <p className="text-[0.9rem] font-bold text-[#1c1c1e] mt-0.5">
-                  {expanded.analysis.faceShape} · {(expanded.analysis.lookmaxScore * 10).toFixed(2)}/100
-                </p>
+                {/* <p className="text-[0.9rem] font-bold text-[#1c1c1e] mt-0.5">
+                  {expanded.analysis.faceShape} · {(expanded.analysis.lookmaxScore * 10).toFixed(3)}/100
+                </p> */}
               </div>
               <button onClick={closeModal}
                 className="w-8 h-8 flex items-center justify-center rounded-full bg-[rgba(0,0,0,0.06)] text-[#6e6e73] border-none cursor-pointer text-lg hover:bg-[rgba(0,0,0,0.1)] transition-all">
@@ -666,7 +666,7 @@ export default function ProfilePage() {
                   <div>
                     <p className="label-style mb-1">Looksmax оноо</p>
                     <div className="flex items-end gap-1">
-                      <span className="text-[2.4rem] font-extrabold text-[#1c1c1e] leading-none tracking-[-0.04em]">{(expanded.analysis.lookmaxScore * 10).toFixed(2)}</span>
+                      <span className="text-[2.4rem] font-extrabold text-[#1c1c1e] leading-none tracking-[-0.04em]">{(expanded.analysis.lookmaxScore * 10).toFixed(3)}</span>
                       <span className="text-[#aeaeb2] text-[0.9rem] mb-1">/100</span>
                     </div>
                   </div>
