@@ -170,10 +170,10 @@ export default function AnalyzePage() {
     if (step !== "result" || !result?.analysisId || generatedLooks.length > 0 || generatingLooks) return;
 
     const id = result.analysisId;
-    setGeneratingLooks(true);
 
-    // Step 1: Check DB for already-saved looks (server may have finished while user was away)
+    // Step 1: Check DB — setGeneratingLooks inside async callback to avoid ESLint warning
     import("@/apis/analyze").then(async ({ generateLooks: gl }) => {
+      setGeneratingLooks(true);
       try {
         const { siteUrl } = await import("@/config/site");
         const res = await fetch(`${siteUrl}/analyze/result/${id}`);
