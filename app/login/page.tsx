@@ -41,13 +41,29 @@ export default function LoginPage() {
         else { setError("OTP хугацаа дууссан. Дахин оролдоно уу."); setStep("phone"); setSession(null); }
       } catch (err) {
         if (cancelled) return;
-        if (err instanceof ApiError && (err.status === 404 || err.status === 410)) { setError("OTP хугацаа дууссан. Дахин оролдоно уу."); setStep("phone"); setSession(null); return; }
+        if (err instanceof ApiError && (err.status === 404 || err.status === 410)) {
+          setError("OTP хугацаа дууссан. Дахин оролдоно уу."); setStep("phone"); setSession(null); return;
+        }
         if (Date.now() < expiresAt + 2_000) { timer = setTimeout(check, 3_000); }
       }
     }
 
     let timer: ReturnType<typeof setTimeout> = setTimeout(check, 3_000);
-    return () => { cancelled = true; clearTimeout(timer); };
+
+    // Mobile: when user comes back from SMS app, check immediately
+    function onVisible() {
+      if (document.visibilityState === "visible" && !cancelled) {
+        clearTimeout(timer);
+        timer = setTimeout(check, 300);  // small delay to let backend process
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [step, session]);
 
   async function handleSend(e: React.FormEvent) {
