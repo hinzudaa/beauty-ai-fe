@@ -271,19 +271,18 @@ export default function AnalyzePage() {
     <div className="min-h-screen relative overflow-hidden">
 
       <div className="relative max-w-[560px] mx-auto px-5 pt-10 pb-24">
-
         {/* Header */}
         <div className="mb-8 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 text-[0.72rem] font-bold tracking-[0.12em] uppercase"
-            style={{ background: "rgba(236,72,153,0.08)", color: "#db2777", border: "1px solid rgba(236,72,153,0.2)" }}>
+            style={{ background: "rgba(147,51,234,0.08)", color: "#9333ea", border: "1px solid rgba(147,51,234,0.2)" }}>
             🌸 AI Looka · Beauty
           </div>
           <h1 className="text-[clamp(1.6rem,4vw,2.2rem)] font-extrabold tracking-[-0.03em] leading-[1.15]"
             style={{ color: "#1c1c1e" }}>
             {step === "subscribe"   && <>Захиалга сонгох <span className="text-[#9333ea]">✨</span></>}
-            {step === "payment"     && <>QPay төлбөр <span className="text-pink-400">💳</span></>}
+            {step === "payment"     && <>QPay төлбөр <span className="text-purple-500">💳</span></>}
             {step === "upload"      && <>Selfie оруулах <span className="text-[#9333ea]">📸</span></>}
-            {step === "occasion"    && <>Нөхцөл сонгох <span className="text-pink-400">🎀</span></>}
+            {step === "occasion"    && <>Нөхцөл сонгох <span className="text-purple-500">🎀</span></>}
             {step === "result"      && <>Миний шинжилгээ <span className="text-[#9333ea]">✨</span></>}
             {step === "limitReached" && <>Сарын хязгаарт хүрлээ <span className="text-red-400">🚫</span></>}
           </h1>
@@ -471,27 +470,27 @@ export default function AnalyzePage() {
               style={{
                 background: "rgba(255,255,255,0.7)",
                 backdropFilter: "blur(20px)",
-                border: "2px dashed rgba(217,70,239,0.3)",
-                boxShadow: "0 8px 32px rgba(217,70,239,0.08), inset 0 1px 0 rgba(255,255,255,0.9)",
+                border: "2px dashed rgba(147,51,234,0.3)",
+                boxShadow: "0 8px 32px rgba(147,51,234,0.08), inset 0 1px 0 rgba(255,255,255,0.9)",
               }}
               onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.type.startsWith("image/")) handleFile(f); }}
               onDragOver={(e) => e.preventDefault()}
               onClick={() => inputRef.current?.click()}
             >
               {/* Cute corner decorations */}
-              <span className="absolute top-4 left-4 text-pink-200 text-lg select-none">🌸</span>
+              <span className="absolute top-4 left-4 text-purple-200 text-lg select-none">🌸</span>
               <span className="absolute top-4 right-4 text-purple-200 text-lg select-none">✨</span>
               <span className="absolute bottom-4 left-4 text-purple-200 text-lg select-none">💜</span>
-              <span className="absolute bottom-4 right-4 text-pink-200 text-lg select-none">🌸</span>
+              <span className="absolute bottom-4 right-4 text-purple-200 text-lg select-none">🌸</span>
 
               <input ref={inputRef} type="file" accept="image/*" className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
 
               {/* Camera icon */}
               <div className="w-24 h-24 rounded-full flex items-center justify-center relative"
-                style={{ background: "linear-gradient(135deg, rgba(217,70,239,0.12), rgba(147,51,234,0.12))" }}>
+                style={{ background: "linear-gradient(135deg, rgba(147,51,234,0.12), rgba(147,51,234,0.12))" }}>
                 <div className="absolute inset-0 rounded-full animate-ping opacity-20"
-                  style={{ background: "radial-gradient(circle, #d946ef, transparent)" }} />
+                  style={{ background: "radial-gradient(circle, #9333ea, transparent)" }} />
                 <span className="text-[2.8rem] relative z-10">📸</span>
               </div>
 
@@ -502,13 +501,13 @@ export default function AnalyzePage() {
                 <p className="text-[0.8rem] font-semibold mb-1" style={{ color: "#9333ea" }}>
                   Хөөрхөн гарсан селфигээ оруулаарай😁
                 </p>
-                <p className="text-[0.75rem]" style={{ color: "#c4b5fd" }}>
+                <p className="text-[0.75rem]" style={{ color: "#a78bfa" }}>
                   JPG · PNG · WEBP
                 </p>
               </div>
 
               <div className="px-6 py-2.5 rounded-full font-bold text-[0.85rem] text-white"
-                style={{ background: "linear-gradient(135deg, #d946ef, #9333ea)", boxShadow: "0 4px 16px rgba(217,70,239,0.35)" }}>
+                style={{ background: "linear-gradient(270deg, #9333ea, #7c3aed)", boxShadow: "0 4px 16px rgba(147,51,234,0.35)" }}>
                 Зураг сонгох
               </div>
             </div>
@@ -521,10 +520,10 @@ export default function AnalyzePage() {
             {/* Preview card */}
             {preview && (
               <div className="flex items-center gap-4 p-4 rounded-[20px]"
-                style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.9)", boxShadow: "0 4px 20px rgba(217,70,239,0.06)" }}>
+                style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.9)", boxShadow: "0 4px 20px rgba(147,51,234,0.06)" }}>
                 <div className="relative shrink-0">
                   <Image src={preview} alt="preview" width={60} height={60}
-                    className="object-cover rounded-[14px] border-2 border-pink-100" style={{ aspectRatio: "1" }} />
+                    className="object-cover rounded-[14px] border-2 border-purple-100" style={{ aspectRatio: "1" }} />
                   {uploading && (
                     <div className="absolute inset-0 rounded-[14px] bg-white/60 flex items-center justify-center">
                       <div className="w-4 h-4 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" />
@@ -535,13 +534,13 @@ export default function AnalyzePage() {
                   <p className="text-[0.88rem] font-bold" style={{ color: "#1c1c1e" }}>
                     {uploading ? "Хуулж байна... 🌸" : "Зураг бэлэн ✓"}
                   </p>
-                  <p className="text-[0.74rem] mt-0.5" style={{ color: "#c4b5fd" }}>
+                  <p className="text-[0.74rem] mt-0.5" style={{ color: "#a78bfa" }}>
                     {uploading ? "Хуулж байна..." : "Нөхцлөө сонгоно уу"}
                   </p>
                 </div>
                 <button onClick={() => setStep("upload")}
                   className="text-[0.72rem] font-semibold px-3 py-1.5 rounded-full border-none cursor-pointer"
-                  style={{ background: "rgba(217,70,239,0.08)", color: "#d946ef" }}>
+                  style={{ background: "rgba(147,51,234,0.08)", color: "#9333ea" }}>
                   Солих
                 </button>
               </div>
@@ -555,20 +554,20 @@ export default function AnalyzePage() {
                   <button key={o.id} onClick={() => setOccasion(o.id)}
                     className="py-5 px-3 rounded-[20px] text-center cursor-pointer transition-all relative overflow-hidden"
                     style={{
-                      background:  sel ? "linear-gradient(135deg, rgba(217,70,239,0.1), rgba(147,51,234,0.08))" : "rgba(255,255,255,0.7)",
-                      border:      sel ? "2px solid rgba(217,70,239,0.4)" : "2px solid rgba(255,255,255,0.9)",
-                      boxShadow:   sel ? "0 6px 20px rgba(217,70,239,0.15)" : "0 2px 12px rgba(0,0,0,0.04)",
+                      background:  sel ? "linear-gradient(135deg, rgba(147,51,234,0.1), rgba(147,51,234,0.08))" : "rgba(255,255,255,0.7)",
+                      border:      sel ? "2px solid rgba(147,51,234,0.4)" : "2px solid rgba(255,255,255,0.9)",
+                      boxShadow:   sel ? "0 6px 20px rgba(147,51,234,0.15)" : "0 2px 12px rgba(0,0,0,0.04)",
                       backdropFilter: "blur(12px)",
                     }}>
                     {sel && (
                       <div className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center"
-                        style={{ background: "linear-gradient(135deg,#d946ef,#9333ea)" }}>
+                        style={{ background: "linear-gradient(270deg, #9333ea, #7c3aed)" }}>
                         <span className="text-white text-[0.5rem] font-black">✓</span>
                       </div>
                     )}
                     <p className="text-[1.8rem] mb-2">{o.icon}</p>
                     <p className="text-[0.8rem] font-extrabold mb-0.5" style={{ color: sel ? "#9333ea" : "#1c1c1e" }}>{o.label}</p>
-                    <p className="text-[0.65rem] font-medium" style={{ color: sel ? "#d946ef" : "#c4b5fd" }}>{o.sub}</p>
+                    <p className="text-[0.65rem] font-medium" style={{ color: sel ? "#9333ea" : "#a78bfa" }}>{o.sub}</p>
                   </button>
                 );
               })}
@@ -586,9 +585,9 @@ export default function AnalyzePage() {
               style={{
                 background: uploading || !photoUrl
                   ? "rgba(0,0,0,0.08)"
-                  : "linear-gradient(135deg, #d946ef, #9333ea)",
-                boxShadow:  uploading || !photoUrl ? "none" : "0 6px 24px rgba(217,70,239,0.4)",
-                color:      uploading || !photoUrl ? "#c4b5fd" : "#fff",
+                  : "linear-gradient(270deg, #9333ea, #7c3aed)",
+                boxShadow:  uploading || !photoUrl ? "none" : "0 6px 24px rgba(147,51,234,0.4)",
+                color:      uploading || !photoUrl ? "#a78bfa" : "#fff",
                 cursor:     uploading || !photoUrl ? "not-allowed" : "pointer",
               }}>
               {uploading ? "Хуулж байна... 🌸" : "Шинжлэх ✨"}
@@ -786,7 +785,7 @@ export default function AnalyzePage() {
             {/* Makeup tips */}
             {result.analysis.makeupTips && (
               <div className="card p-5">
-                <p className="label-style mb-2" style={{ color: "#ec4899" }}>💄 Нүүр будалтын зөвлөгөө</p>
+                <p className="label-style mb-2" style={{ color: "#9333ea" }}>💄 Нүүр будалтын зөвлөгөө</p>
                 <p className="text-[0.86rem] text-[#3a3a3c] leading-[1.65]">{result.analysis.makeupTips}</p>
               </div>
             )}
