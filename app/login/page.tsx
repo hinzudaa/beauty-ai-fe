@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { otpStart, otpVerify } from "@/apis";
 import { ApiError } from "@/utils/request";
 import { useAuth } from "@/lib/AuthContext";
@@ -199,7 +200,11 @@ export default function LoginPage() {
               </form>
 
                <p className="mt-12 text-center text-[0.72rem] text-gray-600 leading-[1.6]">
-                Нэвтэрснээр үйлчилгээний нөхцөлийг зөвшөөрч байна
+                Нэвтэрснээр{" "}
+                <Link href="/terms" className="underline underline-offset-2 hover:text-[#9333ea] transition-colors">үйлчилгээний нөхцөл</Link>
+                {" "}болон{" "}
+                <Link href="/privacy" className="underline underline-offset-2 hover:text-[#9333ea] transition-colors">нууцлалын бодлого</Link>
+                -г зөвшөөрч байна
               </p>
             </>
           )}
