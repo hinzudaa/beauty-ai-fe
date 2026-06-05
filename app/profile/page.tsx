@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { getProfile, getAnalyses, ProfileData, SavedAnalysis } from "@/apis/profile";
 import { appUrl } from "@/config/site";
 import ShareButton from "@/components/ShareButton";
+import LoadingScreen from "@/components/LoadingScreen";
 
 const FEATURE: Record<string, { label: string; icon: string; color: string }> = {
   full:      { label: "Бүрэн шинжилгээ",   icon: "✦", color: "#9333ea" },
@@ -59,6 +60,8 @@ export default function ProfilePage() {
     () => getAnalyses(analysisPage),
     { revalidateOnFocus: false }
   );
+
+  if (isLoading) return <LoadingScreen />;
 
   if (!user && !isLoading) {
     return (
@@ -263,11 +266,7 @@ export default function ProfilePage() {
         </div>
 
         {analysesLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="card h-[200px] animate-pulse" />
-            ))}
-          </div>
+          <LoadingScreen />
         ) : !analysesData?.data.length ? (
           <div className="card p-10 text-center">
             <p className="text-[0.9rem] text-[#8e8e93]">Одоогоор шинжилгээ хийгдээгүй байна.</p>

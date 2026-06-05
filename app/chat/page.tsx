@@ -4,6 +4,7 @@ import Link from "next/link";
 import { siteUrl } from "@/config/site";
 import { tokenStore, ApiError } from "@/utils/request";
 import { getProfile } from "@/apis/profile";
+import LoadingScreen from "@/components/LoadingScreen";
 
 type Message  = { role: "user" | "ai"; text: string };
 type AuthState = "loading" | "no-auth" | "no-pro" | "ok";
@@ -155,7 +156,7 @@ export default function ChatPage() {
       <div className="pt-10 shrink-0">
         <div className="flex items-end justify-between mb-5">
           <div>
-            <span className="label-style inline-flex items-center gap-[6px] px-[13px] py-[5px] rounded-full bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] text-[#9333ea] mb-4">
+            <span className="label-style-flex items-center gap-[6px] px-[13px] py-[5px] rounded-full bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] text-[#9333ea] mb-4">
               ✦ &nbsp;Pro захиалга
             </span>
             <h1 className="text-[clamp(2.2rem,5vw,3.5rem)] tracking-[-0.03em] leading-[1.06] text-[#1c1c1e]">
@@ -173,14 +174,8 @@ export default function ChatPage() {
         <div className="h-px bg-[rgba(0,0,0,0.07)] mb-2" />
       </div>
 
-      {/* Loading spinner */}
-      {authState === "loading" && (
-        <div className="flex-1 flex items-center justify-center gap-3">
-          {[0,1,2].map((i) => (
-            <span key={i} className="animate-dot-blink w-3 h-3 rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.2}s` }} />
-          ))}
-        </div>
-      )}
+      {/* Loading */}
+      {authState === "loading" && <LoadingScreen />}
 
       {/* Gate for unauthenticated / non-Pro users */}
       {(authState === "no-auth" || authState === "no-pro") && (
@@ -228,7 +223,7 @@ export default function ChatPage() {
                 </div>
                 <div className="bg-white border border-[rgba(0,0,0,0.07)] px-[18px] py-[14px] rounded-[20px_20px_20px_5px] flex items-center gap-2 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
                   {[0,1,2].map((i) => (
-                    <span key={i} className="animate-dot-blink w-[7px] h-[7px] rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.15}s` }} />
+                    <span key={i} className="animate-dot-blink w-[7px] h-[7px] rounded-full bg-[#9333ea]-block" style={{ animationDelay: `${i*0.15}s` }} />
                   ))}
                 </div>
               </div>

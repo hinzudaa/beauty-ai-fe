@@ -12,6 +12,7 @@ import { tokenStore } from "@/utils/request";
 import { photoStore } from "@/utils/photoStore";
 import { appUrl } from "@/config/site";
 import ShareButton from "@/components/ShareButton";
+import LoadingScreen from "@/components/LoadingScreen";
 
 /**
  * Step order:
@@ -59,19 +60,12 @@ const PLAN_META = [
 ];
 
 export default function AnalyzePage() {
-  // Lazy initializers — run synchronously once, avoiding setState-in-effect
-  const [step, setStep]               = useState<Step>(() =>
-    tokenStore.get() ? "checking" : "subscribe"
-  );
-  const [notLoggedIn, setNotLoggedIn] = useState(() => !tokenStore.get());
-  const [selectedPlan, setSelectedPlan] = useState<"basic" | "standard" | "pro" | null>(() => {
-    const p = typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("plan")
-      : null;
-    return p === "basic" || p === "pro" ? p : null;
-  });
+  // SSR-safe: both server and client start with "checking" so tree always matches
+  const [step, setStep]               = useState<Step>("checking");
+  const [notLoggedIn, setNotLoggedIn] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<"basic" | "standard" | "pro" | null>(null);
 
-  const [preview, setPreview]   = useState<string | null>(() => photoStore.get()?.preview ?? null);
+  const [preview, setPreview]   = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [occasion, setOccasion]   = useState("interview");
@@ -89,21 +83,31 @@ export default function AnalyzePage() {
   const router   = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  /* ── On mount: async only — no synchronous setState here ── */
+  /* ── On mount: read browser APIs, then fetch profile ── */
   useEffect(() => {
-    // No token → already handled by lazy init (step = "subscribe", notLoggedIn = true)
-    if (!tokenStore.get()) return;
+    // Read browser-only values after hydration
+    const token = tokenStore.get();
+    const saved = photoStore.get();
+    if (saved?.preview) setPreview(saved.preview);
+
+    const p = new URLSearchParams(window.location.search).get("plan");
+    if (p === "basic" || p === "pro") setSelectedPlan(p);
+
+    if (!token) {
+      setNotLoggedIn(true);
+      setStep("subscribe");
+      return;
+    }
 
     getProfile()
       .then((p) => {
         setProfile(p);
         const sub = p.subscription;
         if (sub?.status === "active") {
-          // Check if monthly limit is already reached
           if (sub.monthlyUsage >= sub.usageLimit) {
             setStep("limitReached");
           } else {
-            setStep(preview && photoUrl ? "occasion" : "upload");
+            setStep(saved?.preview ? "occasion" : "upload");
           }
         } else {
           setStep("subscribe");
@@ -257,8 +261,12 @@ export default function AnalyzePage() {
   /* ─────────────────── UI ─────────────────── */
 
   return (
+    <>
+      {/* Loading overlay — fixed fullscreen, no tree mismatch */}
+      {(step === "checking" || step === "analyzing") && <LoadingScreen />}
+
     <div className="min-h-screen">
-      <div className="max-w-[860px] mx-auto px-5 md:px-8 pt-12 pb-24 drop-shadow-2xl">
+      <div className="max-w-[860px] mx-auto px-5 md:px-8 pt-12 pb-24">
 
         {/* Header */}
         <div className="mb-10">
@@ -266,12 +274,10 @@ export default function AnalyzePage() {
             ✦ &nbsp;AI Шинжилгээ · Нүүр · Үс & Грим · Хувцас
           </span>
           <h1 className="text-[clamp(1.8rem,4vw,2.6rem)] tracking-[-0.03em] leading-[1.1] text-center">
-            {step === "checking"  && "Уншиж байна..."}
             {step === "subscribe" && "Захиалга сонгох"}
             {step === "payment"   && "QPay төлбөр"}
             {step === "upload"    && "Selfie оруулна уу"}
             {step === "occasion"  && "Нөхцөл сонгох"}
-            {step === "analyzing"   && "Шинжилж байна..."}
             {step === "result"      && "Таны бүрэн дүн"}
             {step === "limitReached" && "Сарын хязгаарт хүрлээ"}
           </h1>
@@ -281,15 +287,6 @@ export default function AnalyzePage() {
             </p>
           )}
         </div>
-
-        {/* ── CHECKING ── */}
-        {step === "checking" && (
-          <div className="flex justify-center gap-3 py-20">
-            {[0,1,2].map((i) => (
-              <span key={i} className="animate-dot-blink w-3 h-3 rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.2}s` }} />
-            ))}
-          </div>
-        )}
 
         {/* ── SUBSCRIBE — plan selection ── */}
         {step === "subscribe" && (
@@ -436,7 +433,7 @@ export default function AnalyzePage() {
 
               <div className="flex items-center gap-2 justify-center mb-5">
                 {[0,1,2].map((i) => (
-                  <span key={i} className="animate-dot-blink w-[6px] h-[6px] rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.2}s` }} />
+                  <span key={i} className="animate-dot-blink w-[6px] h-[6px] rounded-full bg-[#9333ea]-block" style={{ animationDelay: `${i*0.2}s` }} />
                 ))}
                 <span className="text-[0.82rem] text-[#8e8e93]">Төлбөр хүлээж байна...</span>
               </div>
@@ -592,26 +589,7 @@ export default function AnalyzePage() {
           </div>
         )}
 
-        {/* ── ANALYZING ── */}
-        {step === "analyzing" && (
-          <div className="card p-16 text-center max-w-[480px] mx-auto">
-            <div className="flex gap-3 justify-center mb-6">
-              {[0,1,2].map((i) => (
-                <span key={i} className="animate-dot-blink w-3 h-3 rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.2}s` }} />
-              ))}
-            </div>
-            <p className="text-[1.1rem] font-bold text-[#1c1c1e] mb-3">AI гурван чиглэлд нэгэн зэрэг шинжилж байна</p>
-            <div className="flex flex-col gap-1.5">
-              {[
-                { label: "Нүүрний хэлбэр · Арьсны тон · Style type", color: "#9333ea" },
-                { label: "Үс засал · Нүүр будалт · Өнгөний палет",  color: "#a855f7" },
-                { label: "Хувцас хослол · Стилийн зөвлөмж",         color: "#7c3aed" },
-              ].map((l) => (
-                <p key={l.label} className="label-style text-center" style={{ color: l.color }}>{l.label}</p>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* analyzing — handled by early return above */}
 
         {/* ── RESULT ── */}
         {step === "result" && result && (
@@ -842,7 +820,7 @@ export default function AnalyzePage() {
                   {generatingLooks && (
                     <div className="flex items-center gap-2">
                       {[0,1,2].map((i) => (
-                        <span key={i} className="animate-dot-blink w-[5px] h-[5px] rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.2}s` }} />
+                        <span key={i} className="animate-dot-blink w-[5px] h-[5px] rounded-full bg-[#9333ea]-block" style={{ animationDelay: `${i*0.2}s` }} />
                       ))}
                       <span className="text-[0.72rem] text-[#9333ea]">Зурагийг үүсгэж байна...</span>
                     </div>
@@ -957,7 +935,7 @@ export default function AnalyzePage() {
                   )}
                   <div className="flex items-center gap-2 justify-center mt-4">
                     {[0,1,2].map((i) => (
-                      <span key={i} className="animate-dot-blink w-[5px] h-[5px] rounded-full bg-[#9333ea] inline-block" style={{ animationDelay: `${i*0.2}s` }} />
+                      <span key={i} className="animate-dot-blink w-[5px] h-[5px] rounded-full bg-[#9333ea]-block" style={{ animationDelay: `${i*0.2}s` }} />
                     ))}
                     <span className="text-[0.8rem] text-[#8e8e93]">Төлбөр хүлээж байна...</span>
                   </div>
@@ -986,5 +964,6 @@ export default function AnalyzePage() {
         </div>
       )}
     </div>
+    </>
   );
 }
