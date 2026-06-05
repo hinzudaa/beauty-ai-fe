@@ -5,7 +5,6 @@ import useSWR from "swr";
 import { otpStart, otpVerify } from "@/apis";
 import { ApiError, tokenStore } from "@/utils/request";
 import type { OtpStartResponse, AuthResponse } from "@/types/auth";
-
 const SESSION_KEY = "looka_otp_session";
 
 function saveSession(s: OtpStartResponse | null) {
@@ -29,17 +28,12 @@ function loadSession(): OtpStartResponse | null {
 }
 
 export default function LoginPage() {
-  const [step, setStep]       = useState<"phone" | "otp">("phone");
-  const [phone, setPhone]     = useState("");
-  const [error, setError]     = useState("");
-  const [busy, setBusy]       = useState(false);
-  const [session, setSession] = useState<OtpStartResponse | null>(null);
-
-  // Restore session on mount (handles page reload after SMS app switch)
-  useEffect(() => {
-    const saved = loadSession();
-    if (saved) { setSession(saved); setStep("otp"); }
-  }, []);
+  // Lazy initializers — avoids setState-in-effect lint error, also faster
+  const [session, setSession] = useState<OtpStartResponse | null>(() => loadSession());
+  const [step,    setStep]    = useState<"phone" | "otp">(() => loadSession() ? "otp" : "phone");
+  const [phone,   setPhone]   = useState("");
+  const [error,   setError]   = useState("");
+  const [busy,    setBusy]    = useState(false);
 
   const { data: secondsLeft = 0 } = useSWR(
     session ? ["countdown", session.expiresAt] : null,
