@@ -10,6 +10,7 @@ import { getProfile, ProfileData } from "@/apis/profile";
 import { getPrices } from "@/apis/prices";
 import { tokenStore } from "@/utils/request";
 import { photoStore } from "@/utils/photoStore";
+import { resultStore } from "@/utils/resultStore";
 import { appUrl } from "@/config/site";
 import ShareButton from "@/components/ShareButton";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -124,15 +125,23 @@ export default function AnalyzePage() {
         if (saved?.preview) setPreview(saved.preview);
         if (planParam === "basic" || planParam === "pro") setSelectedPlan(planParam);
         const sub = p.subscription;
-        if (sub?.status === "active") {
-          if (sub.monthlyUsage >= sub.usageLimit) {
-            setStep("limitReached");
-          } else {
-            setStep(saved?.preview ? "occasion" : "upload");
-          }
-        } else {
-          setStep("subscribe");
+        if (sub?.status !== "active") { setStep("subscribe"); return; }
+        if (sub.monthlyUsage >= sub.usageLimit) { setStep("limitReached"); return; }
+
+        // ── Hard-refresh recovery ────────────────────────────
+        // If the user refreshed while looks were generating, restore result
+        // and jump back to the result step — the recovery useEffect handles the rest
+        const savedResult = resultStore.getResult();
+        const savedPhoto  = resultStore.getPhotoUrl();
+        if (savedResult) {
+          setResult(savedResult);
+          setActiveTab("hair");
+          if (savedPhoto) setPhotoUrl(savedPhoto);
+          setStep("result");
+          return;
         }
+
+        setStep(saved?.preview ? "occasion" : "upload");
       })
       .catch(() => setStep("subscribe"));
 
@@ -221,7 +230,7 @@ export default function AnalyzePage() {
           outfitStyle:         result.analysis.outfitStyle,
           colorPalette:        result.analysis.colorPalette ?? [],
         },
-        "casual"
+        result.occasion ?? "casual"
       )
         .then(({ looks }) => { setGeneratedLooks(looks); setGeneratingLooks(false); })
         .catch((err) => {
@@ -247,6 +256,7 @@ export default function AnalyzePage() {
     try {
       const { url } = await uploadSelfie(file);
       setPhotoUrl(url);
+      resultStore.setPhotoUrl(url);   // persist for hard-refresh recovery
     } catch (err) {
       setError(err instanceof Error ? err.message : "Зураг хуулахад алдаа гарлаа");
       setStep("upload");
@@ -299,6 +309,7 @@ export default function AnalyzePage() {
     try {
       const r = await runFullAnalysis(photoUrl, occasion);
       setResult(r); setActiveTab("hair"); setStep("result");
+      resultStore.setResult(r);   // persist for hard-refresh recovery
 
       // fal.ai InstantID look generation — both Basic (2 img) and Pro (5 img)
       setGeneratedLooks([]); setGeneratingLooks(true);
@@ -318,6 +329,7 @@ export default function AnalyzePage() {
       )
         .then(({ looks }) => {
           setGeneratedLooks(looks);
+          resultStore.clear();   // looks done — no longer need recovery data
           // Show leaderboard consent ONLY if:
           // 1. Looks generated successfully
           // 2. New score is HIGHER than existing score (improvement)
@@ -371,6 +383,7 @@ export default function AnalyzePage() {
   function resetToUpload() {
     setPreview(null); setPhotoUrl(null); setResult(null); setError(null);
     setGeneratedLooks([]); setGeneratingLooks(false);
+    resultStore.clear();
     setStep("upload");
   }
 
