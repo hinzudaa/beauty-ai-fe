@@ -13,7 +13,7 @@ const PETALS = [
   { left: "92%", delay: "2.4s",  dur: "6.2s", size: 20, rotate: -60 },
 ];
 
-export default function LoadingScreen({ inline = false }: { inline?: boolean }) {
+export default function LoadingScreen({ inline = false, text }: { inline?: boolean; text?: string }) {
   return (
     <div
       className={`${inline ? "w-full flex items-center justify-center" : "fixed inset-0 z-[999] flex items-center justify-center"} overflow-hidden`}
@@ -51,6 +51,19 @@ export default function LoadingScreen({ inline = false }: { inline?: boolean }) 
           </svg>
         </div>
       ))}
+
+      {/* Optional text */}
+      {text && (
+        <div className="absolute bottom-16 left-0 right-0 flex flex-col items-center gap-1 px-6">
+          <p className="text-[0.95rem] font-bold text-[#1c1c1e] text-center">{text}</p>
+          <div className="flex gap-[5px] mt-1">
+            {[0,1,2].map((i) => (
+              <span key={i} className="w-[6px] h-[6px] rounded-full bg-[#9333ea] inline-block"
+                style={{ animation: `lsPulse 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 💜 3 rings + ✨ 6 sparkles + 🪁 logo */}
       <div className="relative flex items-center justify-center">

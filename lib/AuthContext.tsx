@@ -1,10 +1,11 @@
 "use client";
 
-import { createContext, useContext, useSyncExternalStore, ReactNode } from "react";
+import { createContext, useContext, useSyncExternalStore, useState, ReactNode } from "react";
 import useSWR from "swr";
 import { getMe } from "@/apis";
 import { tokenStore } from "@/utils/request";
 import type { IUser } from "@/types/auth";
+import UsernameModal from "@/components/UsernameModal";
 
 interface AuthContextValue {
   user: IUser | null;
@@ -26,6 +27,8 @@ function subscribeToStorage(cb: () => void) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+
   const token = useSyncExternalStore(
     subscribeToStorage,
     () => tokenStore.get(),
@@ -38,8 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     {
       revalidateOnFocus: false,
       shouldRetryOnError: false,
-      onError: () => {
-        tokenStore.clear();
+      onError: () => { tokenStore.clear(); },
+      onSuccess: (u) => {
+        // Show username modal if logged in but no username set
+        if (u && !u.username) setShowUsernameModal(true);
       },
     }
   );
@@ -47,16 +52,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (tok: string, u: IUser) => {
     tokenStore.set(tok);
     mutate(u, { revalidate: false });
+    if (!u.username) setShowUsernameModal(true);
   };
 
   const logout = () => {
     tokenStore.clear();
     mutate(null, { revalidate: false });
+    setShowUsernameModal(false);
   };
 
   return (
     <AuthContext.Provider value={{ user: user ?? null, loading: isLoading, login, logout }}>
       {children}
+      {showUsernameModal && (
+        <UsernameModal onDone={(username) => {
+          setShowUsernameModal(false);
+          mutate((prev) => prev ? { ...prev, username } : prev, { revalidate: false });
+        }} />
+      )}
     </AuthContext.Provider>
   );
 }

@@ -2,6 +2,9 @@ export interface IUser {
   _id: string;
   phone: string;
   phoneVerified: boolean;
+  username?: string | null;
+  lookScore?: number | null;
+  avatarUrl?: string | null;
 }
 
 export interface AuthResponse {

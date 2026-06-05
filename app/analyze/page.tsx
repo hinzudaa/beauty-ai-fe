@@ -266,7 +266,9 @@ export default function AnalyzePage() {
   return (
     <>
       {/* Loading overlay — fixed fullscreen, no tree mismatch */}
-      {(step === "checking" || step === "analyzing") && <LoadingScreen />}
+      {(step === "checking" || step === "analyzing") && (
+        <LoadingScreen text={step === "analyzing" ? "Шинжилж байна, түр хүлээнэ үү..." : undefined} />
+      )}
 
     <div className="min-h-screen relative overflow-hidden">
 

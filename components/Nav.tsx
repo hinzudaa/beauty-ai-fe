@@ -8,8 +8,9 @@ import { useSyncExternalStore } from "react";
 import { useAuth } from "@/lib/AuthContext";
 
 const links = [
-  { href: "/analyze", label: "Шинжилгээ" },
-  { href: "/chat", label: "AI Стилист" },
+  { href: "/analyze",      label: "Шинжилгээ" },
+  { href: "/leaderboard",  label: "🏆 Ranking"  },
+  { href: "/chat",         label: "AI Стилист"  },
 ];
 
 const noop = () => () => { };

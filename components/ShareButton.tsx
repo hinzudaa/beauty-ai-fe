@@ -44,7 +44,7 @@ export default function ShareButton({
     <button
       type="button"
       onClick={() => doShare(url, title)}
-      className={`flex items-center gap-2 rounded-full font-bold text-white cursor-pointer border-none shrink-0 transition-all hover:opacity-90 active:scale-95 ${pad} ${text} ${className}`}
+      className={`flex items-center justify-center gap-2 rounded-full font-bold text-white cursor-pointer border-none shrink-0 transition-all hover:opacity-90 active:scale-95 ${pad} ${text} ${className}`}
       style={{ background: "#1877F2", boxShadow: "0 3px 12px rgba(24,119,242,0.35)" }}
     >
       <svg width="15" height="15" viewBox="0 0 24 24" fill="white" style={{ flexShrink: 0 }}>
