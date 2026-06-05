@@ -12,12 +12,26 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "Looka — AI Beauty Platform",
-  description: "Монгол хүний нүүр, биеийн онцлогт тохирсон AI гоо сайхны зөвлөгч",
+  title: "Looka — AI Looksmax шинжилгээ",
+  description: "Looka AI-д шинжлүүлж өөрийн looksmax оноогоо мэдээрэй!",
   icons: {
-    icon:        "/favicon.png",
-    shortcut:    "/favicon.png",
-    apple:       "/favicon.png",
+    icon:     "/favicon.png",
+    shortcut: "/favicon.png",
+    apple:    "/favicon.png",
+  },
+  openGraph: {
+    title:       "Looka — AI Looksmax шинжилгээ",
+    description: "Looka AI-д шинжлүүлж өөрийн looksmax оноогоо мэдээрэй!",
+    url:         "https://looka.beauty",
+    siteName:    "looka.beauty",
+    images:      [{ url: "https://looka.beauty/favicon.png", width: 512, height: 512 }],
+    type:        "website",
+    locale:      "mn_MN",
+  },
+  twitter: {
+    card:        "summary",
+    title:       "Looka — AI Looksmax шинжилгээ",
+    description: "Looka AI-д шинжлүүлж өөрийн looksmax оноогоо мэдээрэй!",
   },
 };
 
