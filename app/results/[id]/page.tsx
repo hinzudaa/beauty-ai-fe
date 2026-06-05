@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { siteUrl, appUrl } from "@/config/site";
-import ShareResultClient from "./ShareResultClient";
-import Link from "next/link";
 
 interface Analysis {
   faceShape:          string;
@@ -34,24 +34,21 @@ async function fetchResult(id: string): Promise<ResultData | null> {
   }
 }
 
-/* ── OG meta tags — what Facebook shows when the link is shared ── */
+const BOT_RE = /facebookexternalhit|Facebot|facebookcatalog|LinkedInBot|Twitterbot|Googlebot|bingbot|Slackbot|WhatsApp|TelegramBot|Discordbot|bot|crawler|spider|scraper/i;
+
+/* ── OG meta tags — Facebook scraper уншина ── */
 export async function generateMetadata(
   { params }: { params: Promise<{ id: string }> }
 ): Promise<Metadata> {
   const { id } = await params;
   const data = await fetchResult(id);
-  if (!data) {
-    return { title: "Looka — AI Looksmax шинжилгээ" };
-  }
+  if (!data) return { title: "Looka — AI Looksmax шинжилгээ" };
 
   const { analysis, looks, photoUrl } = data;
-
-  // Best image: first AI-generated look (portrait 3:4), fallback to selfie
   const ogImage = looks?.[0]?.imageUrl ?? photoUrl;
   const score   = analysis.lookmaxScore;
   const title   = `Миний looksmax оноо ${score}/10 ✨`;
   const desc    = "Looka AI-д шинжлүүлж өөрийн looksmax оноогоо мэдээрэй!";
-  const pageUrl = `${appUrl}/results/${id}`;
 
   return {
     title,
@@ -59,16 +56,11 @@ export async function generateMetadata(
     openGraph: {
       title,
       description: desc,
-      url:      pageUrl,
+      url:      `${appUrl}/results/${id}`,
       siteName: "looka.beauty",
-      images:   [{
-        url:    ogImage,
-        width:  1024,
-        height: 1024,
-        alt:    title,
-      }],
-      type: "website",
-      locale: "mn_MN",
+      images:   [{ url: ogImage, width: 1024, height: 1024, alt: title }],
+      type:     "website",
+      locale:   "mn_MN",
     },
     twitter: {
       card:        "summary_large_image",
@@ -82,19 +74,27 @@ export async function generateMetadata(
 export default async function ResultPage(
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const data = await fetchResult(id);
+  // Bot (Facebook, Google…): OG tags are already in <head> — render minimal page
+  // Real user: server-side redirect to home, no flash
+  const headersList = await headers();
+  const ua = headersList.get("user-agent") ?? "";
+  const isBot = BOT_RE.test(ua);
 
-  if (!data) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-[1rem] text-[#6e6e73] mb-4">Шинжилгээ олдсонгүй.</p>
-          <Link href="/" className="text-[#9333ea] font-semibold">← Нүүр хуудас</Link>
-        </div>
-      </div>
-    );
+  if (!isBot) {
+    redirect("/");
   }
 
-  return <ShareResultClient data={data} shareUrl={`${appUrl}/results/${id}`} />;
+  // Only bots reach here — render a minimal page so OG tags are valid
+  const { id } = await params;
+  const data = await fetchResult(id);
+  if (!data) redirect("/");
+
+  const score = data.analysis.lookmaxScore;
+  return (
+    <div style={{ padding: 32, fontFamily: "sans-serif" }}>
+      <h1>Looka AI — Looksmax оноо {score}/10</h1>
+      <p>Looka AI-д шинжлүүлж өөрийн looksmax оноогоо мэдээрэй!</p>
+      <a href="https://looka.beauty">looka.beauty →</a>
+    </div>
+  );
 }
