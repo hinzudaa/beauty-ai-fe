@@ -202,7 +202,7 @@ export default function AnalyzePage() {
           faceShape:           r.analysis.faceShape,
           skinTone:            r.analysis.skinTone,
           hairRecommendations: r.analysis.hairRecommendations ?? [],
-          outfitStyle:         r.analysis.outfitStyle ?? "",
+          outfitStyle:         r.analysis.outfitStyle,
           colorPalette:        r.analysis.colorPalette ?? [],
         },
         occasion
@@ -747,22 +747,74 @@ export default function AnalyzePage() {
             )}
 
             {/* Hair & Style */}
+            {/* Hair recommendations */}
             <div className="card p-5">
-              <p className="label-style mb-3">Үс засал & Хувцаслалт</p>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {(result.analysis.hairRecommendations ?? []).map((h) => (
-                  <span key={h} className="text-[0.82rem] font-semibold text-[#9333ea] bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] rounded-full px-3 py-1">
-                    ✦ {h}
-                  </span>
+              <p className="label-style mb-3">✂️ Солонгос үс засалтын зөвлөмж</p>
+              <div className="flex flex-col gap-3">
+                {(result.analysis.hairRecommendations ?? []).map((h, i) => (
+                  <div key={h.name} className="flex gap-3 items-start bg-[rgba(147,51,234,0.04)] rounded-xl p-3 border border-[rgba(147,51,234,0.1)]">
+                    <span className="text-[0.7rem] font-black text-[#9333ea] bg-[rgba(147,51,234,0.12)] rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                    <div>
+                      <p className="text-[0.88rem] font-bold text-[#1c1c1e]">{h.name}</p>
+                      <p className="text-[0.78rem] text-[#6e6e73] leading-[1.5] mt-0.5">{h.reason}</p>
+                    </div>
+                  </div>
                 ))}
               </div>
-              {result.analysis.outfitStyle && (
-                <p className="text-[0.84rem] text-[#6e6e73] leading-[1.6]">
-                  <span className="font-semibold text-[#1c1c1e]">Стиль зөвлөмж: </span>
-                  {result.analysis.outfitStyle}
-                </p>
-              )}
             </div>
+
+            {/* Outfit style */}
+            {result.analysis.outfitStyle && (
+              <div className="card p-5">
+                <p className="label-style mb-3">👗 Korean хувцасны зөвлөмж</p>
+                {result.analysis.outfitStyle.koreanStyle && (
+                  <div className="mb-4">
+                    <p className="text-[0.95rem] font-extrabold text-[#1c1c1e] mb-1">
+                      {result.analysis.outfitStyle.koreanStyle.styleName}
+                    </p>
+                    <p className="text-[0.8rem] text-[#6e6e73] leading-[1.55]">
+                      {result.analysis.outfitStyle.koreanStyle.description}
+                    </p>
+                  </div>
+                )}
+                {result.analysis.outfitStyle.bestColors && result.analysis.outfitStyle.bestColors.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-[0.72rem] font-bold text-[#16a34a] uppercase tracking-wider mb-2">✓ Тохирох өнгөнүүд</p>
+                    <div className="flex flex-wrap gap-2">
+                      {result.analysis.outfitStyle.bestColors.map((c) => (
+                        <span key={c} className="text-[0.75rem] font-medium text-[#1c1c1e] bg-[rgba(22,163,74,0.07)] border border-[rgba(22,163,74,0.2)] rounded-full px-3 py-0.5">{c}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {result.analysis.outfitStyle.avoidColors && result.analysis.outfitStyle.avoidColors.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-[0.72rem] font-bold text-[#ef4444] uppercase tracking-wider mb-2">✗ Зайлсхийх өнгөнүүд</p>
+                    <div className="flex flex-wrap gap-2">
+                      {result.analysis.outfitStyle.avoidColors.map((c) => (
+                        <span key={c} className="text-[0.75rem] font-medium text-[#6e6e73] bg-[rgba(239,68,68,0.05)] border border-[rgba(239,68,68,0.15)] rounded-full px-3 py-0.5">{c}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {result.analysis.outfitStyle.koreanStyle && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                    {[
+                      { label: "Дээд хувцас", items: result.analysis.outfitStyle.koreanStyle.tops },
+                      { label: "Доод хувцас", items: result.analysis.outfitStyle.koreanStyle.bottoms },
+                      { label: "Гадуур хувцас", items: result.analysis.outfitStyle.koreanStyle.outerwear },
+                    ].map(({ label, items: its }) => its && its.length > 0 && (
+                      <div key={label} className="bg-[#f9f9fb] rounded-xl p-3 border border-[rgba(0,0,0,0.05)]">
+                        <p className="text-[0.68rem] font-bold text-[#9333ea] uppercase tracking-wider mb-2">{label}</p>
+                        {its.map((item) => (
+                          <p key={item} className="text-[0.78rem] text-[#3a3a3c] leading-[1.5]">· {item}</p>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Pro upsell — shown after Basic user sees their 2 images */}
             {profile?.subscription?.plan === "basic" && !generatingLooks && generatedLooks.length > 0 && (

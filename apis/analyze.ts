@@ -23,8 +23,19 @@ export interface LooksMaxAnalysis {
   strengths:           string[];
   improvements:        string[];
   makeupTips?:         string;       // Face-specific makeup advice
-  hairRecommendations: string[];
-  outfitStyle:         string;
+  hairRecommendations: Array<{ name: string; reason: string }>;
+  outfitStyle?: {
+    season?:      string;
+    bestColors?:  string[];
+    avoidColors?: string[];
+    koreanStyle?: {
+      styleName?:   string;
+      description?: string;
+      tops?:        string[];
+      bottoms?:     string[];
+      outerwear?:   string[];
+    };
+  };
   colorPalette:        string[];
 }
 
