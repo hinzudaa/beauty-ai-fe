@@ -59,7 +59,7 @@ export default function LeaderboardConsent({ lookScore, looks, username, onClose
             <div className="text-center py-6">
               <div className="text-[3rem] mb-3">🏆</div>
               <p className="text-[1rem] font-extrabold text-[#1c1c1e]">Leaderboard-д нэмэгдлээ!</p>
-              <p className="text-[0.82rem] text-[#8e8e93] mt-1">Ranking хуудасд харагдана</p>
+              <p className="text-[0.82rem] text-[#8e8e93] mt-1">Ranking хуудсанд харагдана</p>
             </div>
           ) : (
             <>
@@ -128,7 +128,7 @@ export default function LeaderboardConsent({ lookScore, looks, username, onClose
               )}
 
               <p className="text-[0.82rem] text-[#6e6e73] text-center mb-5 leading-[1.5]">
-                Сонгосон зург болон оноог leaderboard-д харуулах уу?
+                Сонгосон зураг болон оноог leaderboard-д харуулах уу?
               </p>
 
               <div className="flex gap-3">
