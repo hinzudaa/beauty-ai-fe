@@ -127,7 +127,7 @@ export default function LoginPage() {
       <div className="relative w-full max-w-[400px] px-5 py-10">
 
         {/* Logo */}
-        <div className="flex justify-center mb-10">
+        <div className="flex justify-center">
           <Image src="/logoo.svg" alt="Looka" width={140} height={53} priority
             className="drop-shadow-[0_4px_12px_rgba(147,51,234,0.3)]" />
         </div>
