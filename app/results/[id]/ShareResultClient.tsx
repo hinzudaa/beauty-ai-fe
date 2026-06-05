@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface Analysis {
@@ -60,6 +62,13 @@ function FacebookShareBtn({ url, label = "Facebook-т хуваалцах" }: { u
 }
 
 export default function ShareResultClient({ data, shareUrl }: { data: ResultData; shareUrl: string }) {
+  const router = useRouter();
+
+  // Redirect visitors to home page — OG tags are already read by Facebook scraper
+  useEffect(() => {
+    router.replace("/");
+  }, [router]);
+
   const { analysis, looks, photoUrl } = data;
   const score = analysis.lookmaxScore;
   const scoreColor = score >= 8 ? "#16a34a" : score >= 6 ? "#9333ea" : "#d97706";
