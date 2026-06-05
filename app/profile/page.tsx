@@ -63,20 +63,6 @@ export default function ProfilePage() {
 
   if (isLoading) return <LoadingScreen />;
 
-  if (!user && !isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="text-center flex flex-col gap-4">
-          <p className="text-base text-[#6e6e73]">Профайл харахын тулд нэвтрэнэ үү</p>
-          <a href="/login"
-            className="inline-block bg-[#1c1c1e] text-white text-[0.87rem] font-bold px-6 py-[11px] rounded-full shadow-[0_4px_14px_rgba(0,0,0,0.18)]">
-            Нэвтрэх →
-          </a>
-        </div>
-      </div>
-    );
-  }
-
   const sub        = data?.subscription;
   const totalSpend = data?.payments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0) ?? 0;
   const totalUsage = Object.values(data?.usage ?? {}).reduce((a, b) => a + b, 0);

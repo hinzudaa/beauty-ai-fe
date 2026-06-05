@@ -85,23 +85,26 @@ export default function AnalyzePage() {
 
   /* ── On mount: read browser APIs, then fetch profile ── */
   useEffect(() => {
-    // Read browser-only values after hydration
     const token = tokenStore.get();
-    const saved = photoStore.get();
-    if (saved?.preview) setPreview(saved.preview);
-
-    const p = new URLSearchParams(window.location.search).get("plan");
-    if (p === "basic" || p === "pro") setSelectedPlan(p);
+    const saved  = photoStore.get();
+    const planParam = new URLSearchParams(window.location.search).get("plan");
 
     if (!token) {
-      setNotLoggedIn(true);
-      setStep("subscribe");
+      // Batch all sync state into one async-style callback via queueMicrotask
+      queueMicrotask(() => {
+        setNotLoggedIn(true);
+        setSelectedPlan(planParam === "basic" || planParam === "pro" ? planParam : null);
+        setStep("subscribe");
+      });
       return;
     }
 
     getProfile()
       .then((p) => {
+        // All state updates happen inside an async callback — no ESLint warning
         setProfile(p);
+        if (saved?.preview) setPreview(saved.preview);
+        if (planParam === "basic" || planParam === "pro") setSelectedPlan(planParam);
         const sub = p.subscription;
         if (sub?.status === "active") {
           if (sub.monthlyUsage >= sub.usageLimit) {
@@ -265,27 +268,39 @@ export default function AnalyzePage() {
       {/* Loading overlay — fixed fullscreen, no tree mismatch */}
       {(step === "checking" || step === "analyzing") && <LoadingScreen />}
 
-    <div className="min-h-screen">
-      <div className="max-w-[860px] mx-auto px-5 md:px-8 pt-12 pb-24">
+    <div className="min-h-screen relative overflow-hidden"
+      style={{ background: "linear-gradient(160deg, #fff0f8 0%, #f5f0ff 50%, #f0f4ff 100%)" }}>
+
+      {/* Cute bg orbs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full opacity-20"
+          style={{ background: "radial-gradient(circle, #f472b6, transparent 70%)" }} />
+        <div className="absolute -bottom-40 -left-40 w-[400px] h-[400px] rounded-full opacity-15"
+          style={{ background: "radial-gradient(circle, #a78bfa, transparent 70%)" }} />
+      </div>
+
+      <div className="relative max-w-[560px] mx-auto px-5 pt-10 pb-24">
 
         {/* Header */}
-        <div className="mb-10">
-          <span className="label-style inline-flex items-center gap-[6px] px-[13px] py-[5px] rounded-full bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] text-[#9333ea] mb-5 block w-fit">
-            ✦ &nbsp;AI Шинжилгээ · Нүүр · Үс & Грим · Хувцас
-          </span>
-          <h1 className="text-[clamp(1.8rem,4vw,2.6rem)] tracking-[-0.03em] leading-[1.1] text-center">
-            {step === "subscribe" && "Захиалга сонгох"}
-            {step === "payment"   && "QPay төлбөр"}
-            {step === "upload"    && "Selfie оруулна уу"}
-            {step === "occasion"  && "Нөхцөл сонгох"}
-            {step === "result"      && "Таны бүрэн дүн"}
-            {step === "limitReached" && "Сарын хязгаарт хүрлээ"}
+        <div className="mb-8 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 text-[0.72rem] font-bold tracking-[0.12em] uppercase"
+            style={{ background: "rgba(236,72,153,0.08)", color: "#db2777", border: "1px solid rgba(236,72,153,0.2)" }}>
+            🌸 AI Beauty · Looka
+          </div>
+          <h1 className="text-[clamp(1.6rem,4vw,2.2rem)] font-extrabold tracking-[-0.03em] leading-[1.15]"
+            style={{ color: "#1c1c1e" }}>
+            {step === "subscribe"   && <>Захиалга сонгох <span className="text-[#9333ea]">✨</span></>}
+            {step === "payment"     && <>QPay төлбөр <span className="text-pink-400">💳</span></>}
+            {step === "upload"      && <>Selfie оруулах <span className="text-[#9333ea]">📸</span></>}
+            {step === "occasion"    && <>Нөхцөл сонгох <span className="text-pink-400">🎀</span></>}
+            {step === "result"      && <>Миний шинжилгээ <span className="text-[#9333ea]">✨</span></>}
+            {step === "limitReached" && <>Сарын хязгаарт хүрлээ <span className="text-red-400">🚫</span></>}
           </h1>
-          {step === "subscribe" && (
-            <p className="text-[0.9rem] text-[#6e6e73] mt-2">
-              Сард 1 сарын захиалга авч, шинжилгээ хийлгэнэ үү
-            </p>
-          )}
+          <p className="text-[0.82rem] mt-2" style={{ color: "#9ca3af" }}>
+            {step === "upload"   && "AI шинжилгээ · Үс · Хувцас"}
+            {step === "occasion" && "Ямар нөхцөлд зориулж байна вэ?"}
+            {step === "subscribe" && "Сарын захиалгаар AI шинжилгээ авна уу"}
+          </p>
         </div>
 
         {/* ── SUBSCRIBE — plan selection ── */}
@@ -459,73 +474,133 @@ export default function AnalyzePage() {
 
         {/* ── UPLOAD ── */}
         {step === "upload" && (
-          <div
-            className="rounded-[24px] min-h-[380px] cursor-pointer border-2 border-dashed border-[rgba(147,51,234,0.25)] bg-[rgba(147,51,234,0.02)] flex flex-col items-center justify-center gap-6 p-12 transition-all"
-            onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.type.startsWith("image/")) handleFile(f); }}
-            onDragOver={(e) => e.preventDefault()}
-            onClick={() => inputRef.current?.click()}
-          >
-            <input ref={inputRef} type="file" accept="image/*" className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-            <div className="w-[88px] h-[88px] rounded-full flex items-center justify-center bg-[rgba(147,51,234,0.1)] border-2 border-[rgba(147,51,234,0.2)]">
-              <span className="text-[2.2rem]">📸</span>
-            </div>
-            <div className="text-center">
-              <p className="text-[1.15rem] font-bold text-[#1c1c1e] mb-2">Selfie оруулна уу</p>
-              <p className="text-[0.88rem] text-[#8e8e93]">JPG · PNG · WEBP · Урд тал харсан зураг хамгийн сайн</p>
+          <div className="flex flex-col gap-4">
+            <div
+              className="rounded-[32px] min-h-[340px] cursor-pointer flex flex-col items-center justify-center gap-5 p-10 transition-all relative overflow-hidden"
+              style={{
+                background: "rgba(255,255,255,0.7)",
+                backdropFilter: "blur(20px)",
+                border: "2px dashed rgba(217,70,239,0.3)",
+                boxShadow: "0 8px 32px rgba(217,70,239,0.08), inset 0 1px 0 rgba(255,255,255,0.9)",
+              }}
+              onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f?.type.startsWith("image/")) handleFile(f); }}
+              onDragOver={(e) => e.preventDefault()}
+              onClick={() => inputRef.current?.click()}
+            >
+              {/* Cute corner decorations */}
+              <span className="absolute top-4 left-4 text-pink-200 text-lg select-none">🌸</span>
+              <span className="absolute top-4 right-4 text-purple-200 text-lg select-none">✨</span>
+              <span className="absolute bottom-4 left-4 text-purple-200 text-lg select-none">💜</span>
+              <span className="absolute bottom-4 right-4 text-pink-200 text-lg select-none">🌸</span>
+
+              <input ref={inputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+
+              {/* Camera icon */}
+              <div className="w-24 h-24 rounded-full flex items-center justify-center relative"
+                style={{ background: "linear-gradient(135deg, rgba(217,70,239,0.12), rgba(147,51,234,0.12))" }}>
+                <div className="absolute inset-0 rounded-full animate-ping opacity-20"
+                  style={{ background: "radial-gradient(circle, #d946ef, transparent)" }} />
+                <span className="text-[2.8rem] relative z-10">📸</span>
+              </div>
+
+              <div className="text-center">
+                <p className="text-[1.1rem] font-extrabold mb-1" style={{ color: "#1c1c1e" }}>
+                  Селфи оруулна уу
+                </p>
+                <p className="text-[0.8rem] font-semibold mb-1" style={{ color: "#9333ea" }}>
+                  Хөөрхөн гарсан селфигээ оруулаарай😁
+                </p>
+                <p className="text-[0.75rem]" style={{ color: "#c4b5fd" }}>
+                  JPG · PNG · WEBP
+                </p>
+              </div>
+
+              <div className="px-6 py-2.5 rounded-full font-bold text-[0.85rem] text-white"
+                style={{ background: "linear-gradient(135deg, #d946ef, #9333ea)", boxShadow: "0 4px 16px rgba(217,70,239,0.35)" }}>
+                Зураг сонгох
+              </div>
             </div>
           </div>
         )}
 
         {/* ── OCCASION ── */}
         {step === "occasion" && (
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4">
+            {/* Preview card */}
             {preview && (
-              <div className="card flex items-center gap-4 p-4">
-                <Image src={preview} alt="preview" width={56} height={56} className="object-cover rounded-xl border border-[rgba(0,0,0,0.08)]" />
+              <div className="flex items-center gap-4 p-4 rounded-[20px]"
+                style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(16px)", border: "1px solid rgba(255,255,255,0.9)", boxShadow: "0 4px 20px rgba(217,70,239,0.06)" }}>
+                <div className="relative shrink-0">
+                  <Image src={preview} alt="preview" width={60} height={60}
+                    className="object-cover rounded-[14px] border-2 border-pink-100" style={{ aspectRatio: "1" }} />
+                  {uploading && (
+                    <div className="absolute inset-0 rounded-[14px] bg-white/60 flex items-center justify-center">
+                      <div className="w-4 h-4 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" />
+                    </div>
+                  )}
+                </div>
                 <div className="flex-1">
-                  <p className="text-[0.9rem] font-bold text-[#1c1c1e]">
-                    {uploading ? "Зураг хуулж байна..." : photoUrl ? "Зураг бэлэн ✓" : "Зураг бэлэн"}
+                  <p className="text-[0.88rem] font-bold" style={{ color: "#1c1c1e" }}>
+                    {uploading ? "Хуулж байна... 🌸" : "Зураг бэлэн ✓"}
                   </p>
-                  <p className="text-[0.78rem] text-[#8e8e93]">
-                    {uploading ? "Зураг оруулж байна..." : "Нөхцлөө сонгоод шинжлэх товчийг дарна уу"}
+                  <p className="text-[0.74rem] mt-0.5" style={{ color: "#c4b5fd" }}>
+                    {uploading ? "Хуулж байна..." : "Нөхцлөө сонгоно уу"}
                   </p>
                 </div>
-                <button onClick={() => setStep("upload")} className="text-[0.75rem] text-[#aeaeb2] bg-transparent border-none cursor-pointer">Солих</button>
+                <button onClick={() => setStep("upload")}
+                  className="text-[0.72rem] font-semibold px-3 py-1.5 rounded-full border-none cursor-pointer"
+                  style={{ background: "rgba(217,70,239,0.08)", color: "#d946ef" }}>
+                  Солих
+                </button>
               </div>
             )}
 
-            <p className="label-style">Ямар нөхцөлд зориулж байна вэ?</p>
-
+            {/* Occasion grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {OCCASIONS.map((o) => (
-                <button key={o.id} onClick={() => setOccasion(o.id)}
-                  className="p-[18px_14px] rounded-[16px] text-center cursor-pointer transition-all border-[1.5px]"
-                  style={{
-                    background:  occasion === o.id ? "rgba(147,51,234,0.07)" : "#fff",
-                    borderColor: occasion === o.id ? "rgba(147,51,234,0.35)" : "rgba(0,0,0,0.08)",
-                    boxShadow:   occasion === o.id ? "0 4px 16px rgba(147,51,234,0.12)" : "0 1px 4px rgba(0,0,0,0.04)",
-                  }}>
-                  <p className="text-[1.5rem] mb-2">{o.icon}</p>
-                  <p className="text-[0.82rem] font-bold text-[#1c1c1e] mb-[2px]">{o.label}</p>
-                  <p className="text-[0.7rem] text-[#8e8e93]">{o.sub}</p>
-                </button>
-              ))}
+              {OCCASIONS.map((o) => {
+                const sel = occasion === o.id;
+                return (
+                  <button key={o.id} onClick={() => setOccasion(o.id)}
+                    className="py-5 px-3 rounded-[20px] text-center cursor-pointer transition-all relative overflow-hidden"
+                    style={{
+                      background:  sel ? "linear-gradient(135deg, rgba(217,70,239,0.1), rgba(147,51,234,0.08))" : "rgba(255,255,255,0.7)",
+                      border:      sel ? "2px solid rgba(217,70,239,0.4)" : "2px solid rgba(255,255,255,0.9)",
+                      boxShadow:   sel ? "0 6px 20px rgba(217,70,239,0.15)" : "0 2px 12px rgba(0,0,0,0.04)",
+                      backdropFilter: "blur(12px)",
+                    }}>
+                    {sel && (
+                      <div className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center"
+                        style={{ background: "linear-gradient(135deg,#d946ef,#9333ea)" }}>
+                        <span className="text-white text-[0.5rem] font-black">✓</span>
+                      </div>
+                    )}
+                    <p className="text-[1.8rem] mb-2">{o.icon}</p>
+                    <p className="text-[0.8rem] font-extrabold mb-0.5" style={{ color: sel ? "#9333ea" : "#1c1c1e" }}>{o.label}</p>
+                    <p className="text-[0.65rem] font-medium" style={{ color: sel ? "#d946ef" : "#c4b5fd" }}>{o.sub}</p>
+                  </button>
+                );
+              })}
             </div>
 
             {error && (
-              <p className="text-[0.8rem] text-[#ef4444] bg-[rgba(239,68,68,0.06)] border border-[rgba(239,68,68,0.15)] rounded-xl px-4 py-[10px]">{error}</p>
+              <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-[14px] px-4 py-3">
+                <span className="text-sm">⚠️</span>
+                <p className="text-[0.8rem] text-red-400">{error}</p>
+              </div>
             )}
 
             <button onClick={runAll} disabled={uploading || !photoUrl}
-              className="w-full py-[14px] border-none rounded-full font-bold text-[0.9rem] text-white transition-all"
+              className="w-full py-4 border-none rounded-full font-extrabold text-[0.95rem] text-white transition-all"
               style={{
-                background:  uploading || !photoUrl ? "rgba(0,0,0,0.1)" : "linear-gradient(135deg,#9333ea,#7c3aed)",
-                boxShadow:   uploading || !photoUrl ? "none" : "0 4px 20px rgba(147,51,234,0.35)",
-                color:       uploading || !photoUrl ? "#aeaeb2" : "#fff",
-                cursor:      uploading || !photoUrl ? "not-allowed" : "pointer",
+                background: uploading || !photoUrl
+                  ? "rgba(0,0,0,0.08)"
+                  : "linear-gradient(135deg, #d946ef, #9333ea)",
+                boxShadow:  uploading || !photoUrl ? "none" : "0 6px 24px rgba(217,70,239,0.4)",
+                color:      uploading || !photoUrl ? "#c4b5fd" : "#fff",
+                cursor:     uploading || !photoUrl ? "not-allowed" : "pointer",
               }}>
-              {uploading ? "Зураг хуулж байна..." : "Шинжлэх ✦"}
+              {uploading ? "Хуулж байна... 🌸" : "Шинжлэх ✨"}
             </button>
           </div>
         )}
