@@ -436,8 +436,8 @@ export default function ProfilePage() {
                         <div className="bg-[#f9f9fb] rounded-[16px] p-4 border border-[rgba(0,0,0,0.05)]">
                           <p className="label-style mb-3">Үс засал & Хувцаслалт</p>
                           <div className="flex flex-wrap gap-2 mb-3">
-                            {a.analysis.hairRecommendations?.map((h: string) => (
-                              <span key={h} className="text-[0.78rem] font-semibold text-[#9333ea] bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] rounded-full px-3 py-1">
+                            {a.analysis.hairRecommendations?.map((h: string, idx) => (
+                              <span key={idx} className="text-[0.78rem] font-semibold text-[#9333ea] bg-[rgba(147,51,234,0.08)] border border-[rgba(147,51,234,0.2)] rounded-full px-3 py-1">
                                 ✦ {h}
                               </span>
                             ))}

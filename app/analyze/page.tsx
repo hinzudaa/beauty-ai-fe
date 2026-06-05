@@ -257,7 +257,7 @@ export default function AnalyzePage() {
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-[860px] mx-auto px-5 md:px-8 pt-12 pb-24">
+      <div className="max-w-[860px] mx-auto px-5 md:px-8 pt-12 pb-24 drop-shadow-2xl">
 
         {/* Header */}
         <div className="mb-10">
@@ -851,12 +851,32 @@ export default function AnalyzePage() {
                 {/* Mobile: 1 col full-width · Desktop: 2 col */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {generatedLooks.map((look) => (
-                    <div key={look.name} className="relative rounded-[16px] overflow-hidden bg-[#f5f5f7]">
+                    <div key={look.name} className="relative rounded-[16px] overflow-hidden bg-[#f5f5f7] group">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={look.imageUrl} alt={look.name} className="w-full h-full object-cover object-top" />
                       <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-10"
-                        style={{ background: "linear-gradient(to top,rgba(0,0,0,0.75),transparent)" }}>
-                        <p className="text-[0.82rem] font-bold text-white text-center tracking-wide">{look.name}</p>
+                        style={{ background: "linear-gradient(to top,rgba(0,0,0,0.85),transparent)" }}>
+                        <p className="text-[0.82rem] font-bold text-white text-center tracking-wide mb-2">{look.name}</p>
+                        {/* Download button */}
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res  = await fetch(look.imageUrl);
+                              const blob = await res.blob();
+                              const url  = URL.createObjectURL(blob);
+                              const a    = document.createElement("a");
+                              a.href     = url;
+                              a.download = `looka-${look.name.replace(/\s+/g, "-").toLowerCase()}.jpg`;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            } catch {
+                              window.open(look.imageUrl, "_blank");
+                            }
+                          }}
+                          className="w-full flex items-center justify-center gap-2 py-[9px] rounded-full text-[0.78rem] font-bold text-white border border-white/30 bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all cursor-pointer"
+                        >
+                          ⬇ Татаж авах
+                        </button>
                       </div>
                     </div>
                   ))}
