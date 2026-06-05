@@ -16,15 +16,18 @@ async function doShare(url: string, title: string) {
   if (isMobile() && navigator.share) {
     // Mobile: native OS share sheet → user picks Facebook → works correctly
     try {
-      await navigator.share({ title, url });
+      await navigator.share({
+        title,
+        text: "Looka AI-д шинжлүүлж өөрийн looksmax оноогоо мэдээрэй!",
+        url,
+      });
       return;
     } catch { /* user cancelled */ }
   }
-  // Desktop: open Facebook sharer popup
+  // Desktop: open Facebook sharer in new tab
   window.open(
     `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
-    "_blank",
-    "width=640,height=480,noopener,noreferrer"
+    "_blank"
   );
 }
 
