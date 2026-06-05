@@ -46,12 +46,8 @@ export async function generateMetadata(
 
   const { analysis, looks, photoUrl } = data;
   const ogImage = looks?.[0]?.imageUrl ?? photoUrl;
-  const title   = `Looksmax оноо ${analysis.lookmaxScore}/10 — ${analysis.faceShape} нүүр`;
-  const desc    = [
-    analysis.strengths?.[0] ?? "",
-    `Арьс: ${analysis.skinTone}`,
-    "Looka AI-д шинжлүүлж үзээрэй!",
-  ].filter(Boolean).join(" · ");
+  const title   = `Миний looksmax оноо ${analysis.lookmaxScore}/10 ✨`;
+  const desc    = "Looka AI-д шинжлүүлж өөрийн looksmax оноогоо мэдээрэй!";
 
   return {
     title,

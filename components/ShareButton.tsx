@@ -7,7 +7,7 @@ interface Props {
   size?:    "sm" | "md";
 }
 
-async function doShare(url: string, title: string) {
+async function doShare(url: string, title: string = "Миний looksmax үр дүн — Looka AI") {
   // Mobile: native OS share sheet (FB, Messenger, Instagram, WhatsApp…)
   if (typeof navigator !== "undefined" && navigator.share) {
     try { await navigator.share({ title, url }); return; } catch { /* cancelled */ }
@@ -22,7 +22,7 @@ async function doShare(url: string, title: string) {
 
 export default function ShareButton({
   url,
-  title = "Looka AI — Миний looksmax үр дүн",
+  title = "Миний looksmax үр дүн — Looka AI",
   className = "",
   size = "md",
 }: Props) {
