@@ -851,7 +851,7 @@ export default function AnalyzePage() {
                 {/* Mobile: 1 col full-width · Desktop: 2 col */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {generatedLooks.map((look) => (
-                    <div key={look.name} className="relative rounded-[16px] overflow-hidden bg-[#f5f5f7]" style={{ aspectRatio: "3/4" }}>
+                    <div key={look.name} className="relative rounded-[16px] overflow-hidden bg-[#f5f5f7]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={look.imageUrl} alt={look.name} className="w-full h-full object-cover object-top" />
                       <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 pt-10"
@@ -886,13 +886,14 @@ export default function AnalyzePage() {
                 className="flex-1 min-w-[120px] py-[13px] bg-transparent border border-[rgba(0,0,0,0.1)] rounded-full font-semibold text-[0.87rem] text-[#6e6e73] cursor-pointer">
                 Шинэ зураг
               </button>
-              {result?.analysisId && (
+            </div>
+                  {result?.analysisId && (
                 <button
                   onClick={() => {
                     const url = `${appUrl}/results/${result.analysisId}`;
                     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, "_blank", "width=640,height=480,noopener");
                   }}
-                  className="flex items-center gap-2 px-4 py-[13px] rounded-full font-bold text-[0.87rem] text-white cursor-pointer border-none shrink-0"
+                  className="flex items-center gap-2 px-4 py-[13px] rounded-full font-bold text-[0.87rem] text-white justify-center cursor-pointer border-none shrink-0"
                   style={{ background: "#1877F2", boxShadow: "0 3px 12px rgba(24,119,242,0.4)" }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
@@ -901,7 +902,6 @@ export default function AnalyzePage() {
                   Хуваалцах
                 </button>
               )}
-            </div>
           </div>
         )}
       </div>
