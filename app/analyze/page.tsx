@@ -302,8 +302,16 @@ export default function AnalyzePage() {
       )
         .then(({ looks }) => {
           setGeneratedLooks(looks);
-          // Show leaderboard consent after looks are ready
-          if (looks.length > 0) setShowLbConsent(true);
+          // Show leaderboard consent ONLY if:
+          // 1. Looks generated successfully
+          // 2. New score is HIGHER than existing score (improvement)
+          if (looks.length > 0) {
+            const newScore   = Math.round((r.analysis.lookmaxScore ?? 0) * 10 * 10) / 10;
+            const prevScore  = user?.lookScore ?? 0;
+            if (newScore > prevScore) {
+              setShowLbConsent(true);
+            }
+          }
         })
         .catch(() => { /* images optional — analysis already shown */ })
         .finally(() => setGeneratingLooks(false));
