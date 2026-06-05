@@ -45,9 +45,13 @@ export async function generateMetadata(
   }
 
   const { analysis, looks, photoUrl } = data;
+
+  // Best image: first AI-generated look (portrait 3:4), fallback to selfie
   const ogImage = looks?.[0]?.imageUrl ?? photoUrl;
-  const title   = `Миний looksmax оноо ${analysis.lookmaxScore}/10 ✨`;
+  const score   = analysis.lookmaxScore;
+  const title   = `Миний looksmax оноо ${score}/10 ✨`;
   const desc    = "Looka AI-д шинжлүүлж өөрийн looksmax оноогоо мэдээрэй!";
+  const pageUrl = `${appUrl}/results/${id}`;
 
   return {
     title,
@@ -55,10 +59,16 @@ export async function generateMetadata(
     openGraph: {
       title,
       description: desc,
-      url:         `${appUrl}/results/${id}`,
-      siteName:    "Looka",
-      images:      [{ url: ogImage, width: 1024, height: 1024, alt: title }],
-      type:        "website",
+      url:      pageUrl,
+      siteName: "looka.beauty",
+      images:   [{
+        url:    ogImage,
+        width:  1024,
+        height: 1024,
+        alt:    title,
+      }],
+      type: "website",
+      locale: "mn_MN",
     },
     twitter: {
       card:        "summary_large_image",

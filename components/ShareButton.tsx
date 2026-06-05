@@ -1,39 +1,27 @@
 "use client";
 
 interface Props {
-  url:      string;
-  title?:   string;
+  url:       string;
   className?: string;
-  size?:    "sm" | "md";
+  size?:     "sm" | "md";
 }
 
-async function doShare(url: string, title: string = "Миний looksmax үр дүн — Looka AI") {
-  // Mobile: native OS share sheet (FB, Messenger, Instagram, WhatsApp…)
-  if (typeof navigator !== "undefined" && navigator.share) {
-    try { await navigator.share({ title, url }); return; } catch { /* cancelled */ }
-  }
-  // Desktop fallback: Facebook sharer popup
-  window.open(
-    `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
-    "_blank",
-    "width=640,height=480,noopener,noreferrer"
-  );
+function openFacebook(url: string) {
+  // Always open Facebook web (not the app deeplink)
+  // Using display=page forces web view on mobile browsers
+  const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&display=page`;
+  window.open(fbUrl, "_blank", "noopener,noreferrer");
 }
 
-export default function ShareButton({
-  url,
-  title = "Миний looksmax үр дүн — Looka AI",
-  className = "",
-  size = "md",
-}: Props) {
+export default function ShareButton({ url, className = "", size = "md" }: Props) {
   const pad  = size === "sm" ? "px-4 py-[9px]" : "px-5 py-[12px]";
   const text = size === "sm" ? "text-[0.8rem]" : "text-[0.88rem]";
 
   return (
     <button
       type="button"
-      onClick={() => doShare(url, title)}
-      className={`flex items-center gap-2 rounded-full font-bold text-white cursor-pointer border-none shrink-0 transition-all hover:opacity-90 ${pad} ${text} ${className}`}
+      onClick={() => openFacebook(url)}
+      className={`flex items-center gap-2 rounded-full font-bold text-white cursor-pointer border-none shrink-0 transition-all hover:opacity-90 active:scale-95 ${pad} ${text} ${className}`}
       style={{ background: "#1877F2", boxShadow: "0 3px 12px rgba(24,119,242,0.35)" }}
     >
       <svg width="15" height="15" viewBox="0 0 24 24" fill="white" style={{ flexShrink: 0 }}>
