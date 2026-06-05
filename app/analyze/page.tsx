@@ -47,6 +47,20 @@ const PLAN_META = [
     color: "#3b82f6",
   },
   {
+    id:       "standard" as const,
+    name:     "Standard",
+    limit:    10,
+    features: [
+      "Сард 10 шинжилгээ",
+      "Бүрэн AI looksmax шинжилгээ",
+      "2 AI Look зураг (1 үс + 1 хувцас)",
+      "Өнгөний палет & зөвлөмж",
+      "Facebook-т хуваалцах",
+    ],
+    color: "#6e6e73",
+    decoy: true,
+  },
+  {
     id:        "pro" as const,
     name:      "Pro",
     limit:     10,
@@ -76,7 +90,7 @@ export default function AnalyzePage() {
   const [profile, setProfile]     = useState<ProfileData | null>(null);
   const [result, setResult]       = useState<FullAnalysisResult | null>(null);
   const [activeTab, setActiveTab] = useState<"hair" | "outfit">("hair");
-  const [prices, setPrices]       = useState({ basic: 19900, pro: 59900 });
+  const [prices, setPrices]       = useState({ basic: 19900, standard: 34900, pro: 59900 });
   const [generatedLooks, setGeneratedLooks]     = useState<GeneratedLook[]>([]);
   const [generatingLooks, setGeneratingLooks]   = useState(false);
   const [showLbConsent, setShowLbConsent]       = useState(false);
@@ -123,7 +137,7 @@ export default function AnalyzePage() {
       .catch(() => setStep("subscribe"));
 
     getPrices()
-      .then((p) => setPrices({ basic: p.basicPrice, pro: p.proPrice }))
+      .then((p) => setPrices({ basic: p.basicPrice, standard: p.standardPrice ?? 34900, pro: p.proPrice }))
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -369,7 +383,7 @@ export default function AnalyzePage() {
 
     <div className="min-h-screen relative overflow-hidden">
 
-      <div className="relative max-w-[560px] mx-auto px-5 pt-10 pb-24">
+      <div className="relative max-w-[1200px] mx-auto px-5 pt-10 pb-24">
         {/* Header */}
         <div className="mb-8 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 text-[0.72rem] font-bold tracking-[0.12em] uppercase"
@@ -414,7 +428,7 @@ export default function AnalyzePage() {
             </div>
 
             {/* Plan cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {PLAN_META.map((plan) => (
                 <button key={plan.id} onClick={() => setSelectedPlan(plan.id)}
                   className="p-6 rounded-[22px] text-left transition-all relative overflow-hidden cursor-pointer"
@@ -422,6 +436,7 @@ export default function AnalyzePage() {
                     background:  selectedPlan === plan.id ? (plan.highlight ? "#1c1c1e" : `${plan.color}08`) : "#fff",
                     border:      `2px solid ${selectedPlan === plan.id ? plan.color : "rgba(0,0,0,0.08)"}`,
                     boxShadow:   selectedPlan === plan.id ? `0 8px 32px ${plan.color}25` : "0 2px 12px rgba(0,0,0,0.05)",
+                    opacity:     (plan as { decoy?: boolean }).decoy ? 0.85 : 1,
                   }}>
                   {plan.highlight && (
                     <div className="absolute top-0 left-0 right-0 h-[3px]"
@@ -436,6 +451,11 @@ export default function AnalyzePage() {
                     {plan.highlight && (
                       <span className="text-[0.6rem] font-bold text-[#c084fc] bg-[rgba(192,132,252,0.15)] border border-[rgba(192,132,252,0.3)] rounded-full px-2 py-0.5">
                         Алдартай
+                      </span>
+                    )}
+                    {(plan as { decoy?: boolean }).decoy && (
+                      <span className="text-[0.55rem] font-bold text-[#8e8e93] bg-[rgba(0,0,0,0.05)] border border-[rgba(0,0,0,0.08)] rounded-full px-2 py-0.5">
+                        Стандарт
                       </span>
                     )}
                   </div>
@@ -500,7 +520,7 @@ export default function AnalyzePage() {
                 : selectedPlan
                   ? upgradeInfo?.isUpgrade
                     ? `Upgrade хийх — ₮${upgradeInfo.amount.toLocaleString()} →`
-                    : `${selectedPlan === "pro" ? "Pro" : "Basic"} захиалах — ₮${(selectedPlan === "basic" ? prices.basic : prices.pro).toLocaleString()} →`
+                    : `${selectedPlan === "pro" ? "Pro" : selectedPlan === "standard" ? "Standard" : "Basic"} захиалах — ₮${(selectedPlan === "pro" ? prices.pro : selectedPlan === "standard" ? prices.standard : prices.basic).toLocaleString()} →`
                   : "Багц сонгоно уу"}
             </button>
           </div>
