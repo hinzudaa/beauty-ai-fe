@@ -332,7 +332,7 @@ export default function ProfilePage() {
                     >
                       Дэлгэрэнгүй харах →
                     </button>
-                    <ShareButton url={appUrl} size="sm" />
+                    <ShareButton url={`${appUrl}/results/${a.id}`} size="sm" />
                   </div>
 
                 </div>

@@ -909,7 +909,7 @@ export default function AnalyzePage() {
               </button>
             </div>
                   {result?.analysisId && (
-                <ShareButton url={appUrl} />
+                <ShareButton url={`${appUrl}/results/${result.analysisId}`} />
               )}
           </div>
         )}
