@@ -71,7 +71,7 @@ export function runFullAnalysis(photoUrl: string, event: string): Promise<FullAn
 export function generateLooks(
   imageUrl:   string,
   analysisId: string,
-  analysis:   Pick<LooksMaxAnalysis, "gender" | "faceShape" | "skinTone" | "hairRecommendations" | "outfitStyle" | "colorPalette">,
+  analysis:   Pick<LooksMaxAnalysis, "gender" | "faceShape" | "skinTone" | "lookmaxScore" | "hairRecommendations" | "outfitStyle" | "colorPalette">,
   occasion:   string
 ): Promise<{ looks: GeneratedLook[] }> {
   return http.post("/generate-looks", { imageUrl, analysisId, analysis, occasion });
