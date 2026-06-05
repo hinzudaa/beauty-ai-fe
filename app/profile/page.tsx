@@ -5,9 +5,11 @@ import useSWR from "swr";
 import { useAuth } from "@/lib/AuthContext";
 import { useState, useEffect } from "react";
 import { getProfile, getAnalyses, ProfileData, SavedAnalysis } from "@/apis/profile";
-import { appUrl } from "@/config/site";
+import { appUrl, siteUrl } from "@/config/site";
+import { tokenStore } from "@/utils/request";
 import ShareButton from "@/components/ShareButton";
 import LoadingScreen from "@/components/LoadingScreen";
+import Image from "next/image";
 
 const FEATURE: Record<string, { label: string; icon: string; color: string }> = {
   full:      { label: "Бүрэн шинжилгээ",   icon: "✦", color: "#9333ea" },
@@ -43,12 +45,70 @@ export default function ProfilePage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [previewImg, setPreviewImg]     = useState<{ url: string; name: string } | null>(null);
 
+  // Username edit state
+  const [editingUsername, setEditingUsername] = useState(false);
+  const [newUsername,     setNewUsername]     = useState("");
+  const [unameStatus,     setUnameStatus]     = useState<"idle"|"checking"|"ok"|"taken"|"invalid">("idle");
+  const [unameSaving,     setUnameSaving]     = useState(false);
+  const [unameError,      setUnameError]      = useState<string|null>(null);
+
+  // Leaderboard rank
+  const [myRank, setMyRank] = useState<number | null>(null);
+
   // Slide-up when modal opens, slide-down before closing
   useEffect(() => {
     if (expanded) {
       requestAnimationFrame(() => setModalVisible(true));
     }
   }, [expanded]);
+
+  // Fetch user's leaderboard rank
+  useEffect(() => {
+    if (!user?.username) return;
+    fetch(`${siteUrl}/leaderboard`)
+      .then((r) => r.json())
+      .then((d: { data: Array<{ username: string; rank: number }> }) => {
+        const found = d.data?.find((e) => e.username === user.username);
+        if (found) setMyRank(found.rank);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.username]);
+
+  // Debounce username availability check
+  useEffect(() => {
+    if (!newUsername || newUsername.length < 3) { setUnameStatus("idle"); return; }
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(newUsername)) { setUnameStatus("invalid"); return; }
+    setUnameStatus("checking");
+    const t = setTimeout(async () => {
+      try {
+        const r = await fetch(`${siteUrl}/auth/check-username/${encodeURIComponent(newUsername)}`, {
+          headers: { Authorization: `Bearer ${tokenStore.get()}` },
+        });
+        const d = await r.json();
+        setUnameStatus(d.available ? "ok" : "taken");
+      } catch { setUnameStatus("idle"); }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [newUsername]);
+
+  async function saveUsername() {
+    if (unameStatus !== "ok") return;
+    setUnameSaving(true); setUnameError(null);
+    try {
+      const r = await fetch(`${siteUrl}/auth/username`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${tokenStore.get()}` },
+        body:    JSON.stringify({ username: newUsername }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setUnameError(d.error ?? "Алдаа гарлаа"); return; }
+      setEditingUsername(false);
+      setNewUsername("");
+      window.location.reload(); // refresh to show new username
+    } catch { setUnameError("Алдаа гарлаа"); }
+    finally { setUnameSaving(false); }
+  }
 
   function closeModal() {
     setModalVisible(false);
@@ -132,6 +192,86 @@ export default function ProfilePage() {
               </a>
             </div>
           )}
+
+          {/* Leaderboard card */}
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <p className="label-style">🏆 Leaderboard</p>
+              {myRank && (
+                <span className="text-[0.7rem] font-extrabold px-3 py-1 rounded-full text-white"
+                  style={{ background: "linear-gradient(270deg,#9333ea,#7c3aed)" }}>
+                  #{myRank} байр
+                </span>
+              )}
+            </div>
+
+            {/* Avatar + username row */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="relative shrink-0">
+                {user?.avatarUrl
+                  ? <Image src={user.avatarUrl} alt="avatar" width={52} height={52}
+                      className="rounded-[14px] object-cover border-2 border-purple-100" style={{ aspectRatio: "1" }} />
+                  : <div className="w-[52px] h-[52px] rounded-[14px] bg-purple-50 border-2 border-purple-100 flex items-center justify-center text-xl">✨</div>
+                }
+              </div>
+              <div className="flex-1 min-w-0">
+                {user?.username
+                  ? <p className="text-[0.9rem] font-extrabold text-[#1c1c1e] truncate">@{user.username}</p>
+                  : <p className="text-[0.82rem] text-[#8e8e93]">Хэрэглэгчийн нэр байхгүй</p>
+                }
+                {user?.lookScore != null && (
+                  <p className="text-[0.72rem] text-[#9333ea] font-bold mt-0.5">Оноо: {user.lookScore}/100</p>
+                )}
+              </div>
+            </div>
+
+            {/* Username edit */}
+            {!editingUsername ? (
+              <button
+                onClick={() => { setEditingUsername(true); setNewUsername(user?.username ?? ""); }}
+                className="w-full py-2.5 rounded-full text-[0.8rem] font-semibold border border-[rgba(0,0,0,0.1)] text-[#6e6e73] bg-transparent cursor-pointer hover:bg-[rgba(0,0,0,0.02)] transition-all"
+              >
+                {user?.username ? "✏️ Нэр солих" : "➕ Нэр үүсгэх"}
+              </button>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9333ea] font-bold text-[0.85rem]">@</span>
+                  <input
+                    type="text"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20))}
+                    placeholder="username"
+                    className="w-full pl-8 pr-8 py-2.5 rounded-xl text-[0.85rem] font-semibold text-[#1c1c1e] outline-none transition-all"
+                    style={{
+                      background: "rgba(147,51,234,0.04)",
+                      border: `1.5px solid ${unameStatus === "ok" ? "#16a34a" : unameStatus === "taken" || unameStatus === "invalid" ? "#ef4444" : "rgba(147,51,234,0.2)"}`,
+                    }}
+                    autoFocus
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[0.8rem]"
+                    style={{ color: unameStatus === "ok" ? "#16a34a" : "#ef4444" }}>
+                    {unameStatus === "ok" ? "✓" : unameStatus === "taken" || unameStatus === "invalid" ? "✗" : unameStatus === "checking" ? "⟳" : ""}
+                  </span>
+                </div>
+                <p className="text-[0.68rem] h-3" style={{ color: unameStatus === "ok" ? "#16a34a" : "#ef4444" }}>
+                  {unameStatus === "ok" ? "Боломжтой" : unameStatus === "taken" ? "Аль хэдийн бүртгэлтэй" : unameStatus === "invalid" ? "3–20 тэмдэгт, үсэг/тоо/_" : ""}
+                </p>
+                {unameError && <p className="text-[0.75rem] text-red-500">{unameError}</p>}
+                <div className="flex gap-2">
+                  <button onClick={() => { setEditingUsername(false); setUnameError(null); }}
+                    className="flex-1 py-2 rounded-full text-[0.8rem] font-semibold border border-[rgba(0,0,0,0.1)] text-[#6e6e73] cursor-pointer bg-transparent">
+                    Болих
+                  </button>
+                  <button onClick={saveUsername} disabled={unameStatus !== "ok" || unameSaving}
+                    className="flex-1 py-2 rounded-full text-[0.8rem] font-extrabold text-white border-none cursor-pointer disabled:opacity-40"
+                    style={{ background: "linear-gradient(270deg,#9333ea,#7c3aed)" }}>
+                    {unameSaving ? "..." : "Хадгалах"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3">

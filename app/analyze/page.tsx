@@ -13,6 +13,8 @@ import { photoStore } from "@/utils/photoStore";
 import { appUrl } from "@/config/site";
 import ShareButton from "@/components/ShareButton";
 import LoadingScreen from "@/components/LoadingScreen";
+import LeaderboardConsent from "@/components/LeaderboardConsent";
+import { useAuth } from "@/lib/AuthContext";
 
 /**
  * Step order:
@@ -75,13 +77,15 @@ export default function AnalyzePage() {
   const [result, setResult]       = useState<FullAnalysisResult | null>(null);
   const [activeTab, setActiveTab] = useState<"hair" | "outfit">("hair");
   const [prices, setPrices]       = useState({ basic: 19900, pro: 59900 });
-  const [generatedLooks, setGeneratedLooks]   = useState<GeneratedLook[]>([]);
-  const [generatingLooks, setGeneratingLooks] = useState(false);
-  const [upgradeInfo, setUpgradeInfo]         = useState<UpgradePrice | null>(null);
+  const [generatedLooks, setGeneratedLooks]     = useState<GeneratedLook[]>([]);
+  const [generatingLooks, setGeneratingLooks]   = useState(false);
+  const [showLbConsent, setShowLbConsent]       = useState(false);
+  const [upgradeInfo, setUpgradeInfo]           = useState<UpgradePrice | null>(null);
   const [proInvoice, setProInvoice]           = useState<InvoiceResponse | null>(null);
   const [proPayState, setProPayState]         = useState<"idle" | "creating" | "waiting" | "success">("idle");
-  const router   = useRouter();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const router      = useRouter();
+  const inputRef    = useRef<HTMLInputElement>(null);
+  const { user }    = useAuth();
 
   /* ── On mount: read browser APIs, then fetch profile ── */
   useEffect(() => {
@@ -135,6 +139,87 @@ export default function AnalyzePage() {
       .catch(() => { if (!cancelled) setUpgradeInfo(null); });
     return () => { cancelled = true; };
   }, [selectedPlan, notLoggedIn]);
+
+  /* ── Warn user before leaving while looks are generating ── */
+  useEffect(() => {
+    if (!generatingLooks) return;
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      e.returnValue = "Зураг үүсгэж байна. Хуудсыг орхивол үр дүн алдагдаж болно.";
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [generatingLooks]);
+
+  /* ── On result mount: recover existing looks if user refreshed mid-generation ── */
+  useEffect(() => {
+    if (step !== "result" || !result?.analysisId || generatedLooks.length > 0 || generatingLooks) return;
+
+    const id = result.analysisId;
+    setGeneratingLooks(true);
+
+    // Step 1: Check DB for already-saved looks (server may have finished while user was away)
+    import("@/apis/analyze").then(async ({ generateLooks: gl }) => {
+      try {
+        const { siteUrl } = await import("@/config/site");
+        const res = await fetch(`${siteUrl}/analyze/result/${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.looks && data.looks.length > 0) {
+            // Looks already in DB — no need to re-generate
+            setGeneratedLooks(data.looks);
+            setGeneratingLooks(false);
+            return;
+          }
+        }
+      } catch { /* fall through to generate */ }
+
+      // Step 2: Looks not in DB — try generate-looks
+      // Server returns 202 if already generating (lock held) → poll DB instead
+      if (!result.analysis) { setGeneratingLooks(false); return; }
+
+      let pollTimer: ReturnType<typeof setTimeout>;
+      async function pollUntilReady() {
+        try {
+          const { siteUrl: su } = await import("@/config/site");
+          const r = await fetch(`${su}/analyze/result/${id}`);
+          if (r.ok) {
+            const d = await r.json();
+            if (d.looks && d.looks.length > 0) {
+              setGeneratedLooks(d.looks);
+              setGeneratingLooks(false);
+              return;
+            }
+          }
+        } catch { /* keep polling */ }
+        pollTimer = setTimeout(pollUntilReady, 5000);
+      }
+
+      gl(
+        photoUrl ?? "",
+        id,
+        {
+          gender:              result.analysis.gender,
+          faceShape:           result.analysis.faceShape,
+          skinTone:            result.analysis.skinTone,
+          hairRecommendations: result.analysis.hairRecommendations ?? [],
+          outfitStyle:         result.analysis.outfitStyle,
+          colorPalette:        result.analysis.colorPalette ?? [],
+        },
+        "casual"
+      )
+        .then(({ looks }) => { setGeneratedLooks(looks); setGeneratingLooks(false); })
+        .catch((err) => {
+          // 202 means server is generating — poll DB every 5s
+          if (err?.status === 202 || err?.message?.includes("202")) {
+            pollUntilReady();
+          } else {
+            setGeneratingLooks(false);
+          }
+        });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, result?.analysisId]);
 
   /* ── File select: show preview immediately, upload to R2 in background ── */
   async function handleFile(file: File) {
@@ -215,7 +300,11 @@ export default function AnalyzePage() {
         },
         occasion
       )
-        .then(({ looks }) => setGeneratedLooks(looks))
+        .then(({ looks }) => {
+          setGeneratedLooks(looks);
+          // Show leaderboard consent after looks are ready
+          if (looks.length > 0) setShowLbConsent(true);
+        })
         .catch(() => { /* images optional — analysis already shown */ })
         .finally(() => setGeneratingLooks(false));
     } catch (err) {
@@ -959,6 +1048,16 @@ export default function AnalyzePage() {
           </div>
         )}
       </div>
+
+      {/* ── Leaderboard consent modal ── */}
+      {showLbConsent && (
+        <LeaderboardConsent
+          lookScore={result?.analysis?.lookmaxScore ? Math.round(result.analysis.lookmaxScore * 10 * 10) / 10 : 0}
+          looks={generatedLooks}
+          username={user?.username ?? null}
+          onClose={() => setShowLbConsent(false)}
+        />
+      )}
 
       {/* ── Pro upgrade QPay modal ── */}
       {(proPayState === "waiting" || proPayState === "success") && proInvoice && (

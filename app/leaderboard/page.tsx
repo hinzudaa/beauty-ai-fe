@@ -28,7 +28,7 @@ export default function LeaderboardPage() {
   }, []);
 
   return (
-    <div className="min-h-screen" style={{ background: "linear-gradient(160deg,#f5f0ff 0%,#ede9fe 50%,#f0f4ff 100%)" }}>
+    <div className="min-h-screen">
       <div className="max-w-[600px] mx-auto px-5 pt-10 pb-24">
 
         {/* Header */}
@@ -105,13 +105,13 @@ export default function LeaderboardPage() {
           </div>
         )}
 
-        {/* Rest of list */}
+        {/* Full list — shows from rank 1 if <3 entries, else from rank 4 */}
         <div className="flex flex-col gap-2">
           {loading
-            ? [...Array(10)].map((_, i) => (
+            ? [...Array(5)].map((_, i) => (
                 <div key={i} className="h-16 rounded-2xl bg-white/60 animate-pulse" />
               ))
-            : data.slice(3).map((e) => (
+            : (data.length >= 3 ? data.slice(3) : data).map((e) => (
                 <div key={e.rank}
                   className="flex items-center gap-4 px-5 py-3 rounded-2xl bg-white/70 border border-white/80"
                   style={{ backdropFilter: "blur(12px)", boxShadow: "0 2px 12px rgba(147,51,234,0.06)" }}>
