@@ -1,26 +1,46 @@
 "use client";
 
 interface Props {
-  url:       string;
+  url:        string;
+  title?:     string;
   className?: string;
-  size?:     "sm" | "md";
+  size?:      "sm" | "md";
 }
 
-function openFacebook(url: string) {
-  // Always open Facebook web (not the app deeplink)
-  // Using display=page forces web view on mobile browsers
-  const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&display=page`;
-  window.open(fbUrl, "_blank", "noopener,noreferrer");
+function isMobile(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
-export default function ShareButton({ url, className = "", size = "md" }: Props) {
-  const pad  = size === "sm" ? "px-4 py-[9px]" : "px-5 py-[12px]";
-  const text = size === "sm" ? "text-[0.8rem]" : "text-[0.88rem]";
+async function doShare(url: string, title: string) {
+  if (isMobile() && navigator.share) {
+    // Mobile: native OS share sheet → user picks Facebook → works correctly
+    try {
+      await navigator.share({ title, url });
+      return;
+    } catch { /* user cancelled */ }
+  }
+  // Desktop: open Facebook sharer popup
+  window.open(
+    `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+    "_blank",
+    "width=640,height=480,noopener,noreferrer"
+  );
+}
+
+export default function ShareButton({
+  url,
+  title     = "Миний looksmax оноо — Looka AI",
+  className = "",
+  size      = "md",
+}: Props) {
+  const pad  = size === "sm" ? "px-4 py-[9px]"  : "px-5 py-[12px]";
+  const text = size === "sm" ? "text-[0.8rem]"   : "text-[0.88rem]";
 
   return (
     <button
       type="button"
-      onClick={() => openFacebook(url)}
+      onClick={() => doShare(url, title)}
       className={`flex items-center gap-2 rounded-full font-bold text-white cursor-pointer border-none shrink-0 transition-all hover:opacity-90 active:scale-95 ${pad} ${text} ${className}`}
       style={{ background: "#1877F2", boxShadow: "0 3px 12px rgba(24,119,242,0.35)" }}
     >
