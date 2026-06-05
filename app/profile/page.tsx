@@ -75,12 +75,12 @@ export default function ProfilePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.username]);
 
-  // Debounce username availability check
+  // Debounce username availability check — all setState inside async callback
   useEffect(() => {
-    if (!newUsername || newUsername.length < 3) { setUnameStatus("idle"); return; }
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(newUsername)) { setUnameStatus("invalid"); return; }
-    setUnameStatus("checking");
     const t = setTimeout(async () => {
+      if (!newUsername || newUsername.length < 3) { setUnameStatus("idle"); return; }
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(newUsername)) { setUnameStatus("invalid"); return; }
+      setUnameStatus("checking");
       try {
         const r = await fetch(`${siteUrl}/auth/check-username/${encodeURIComponent(newUsername)}`, {
           headers: { Authorization: `Bearer ${tokenStore.get()}` },
@@ -88,7 +88,7 @@ export default function ProfilePage() {
         const d = await r.json();
         setUnameStatus(d.available ? "ok" : "taken");
       } catch { setUnameStatus("idle"); }
-    }, 500);
+    }, 300);
     return () => clearTimeout(t);
   }, [newUsername]);
 
@@ -193,47 +193,33 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* Leaderboard card */}
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <p className="label-style">🏆 Leaderboard</p>
-              {myRank && (
-                <span className="text-[0.7rem] font-extrabold px-3 py-1 rounded-full text-white"
-                  style={{ background: "linear-gradient(270deg,#9333ea,#7c3aed)" }}>
-                  #{myRank} байр
-                </span>
-              )}
-            </div>
-
-            {/* Avatar + username row */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className="relative shrink-0">
-                {user?.avatarUrl
-                  ? <Image src={user.avatarUrl} alt="avatar" width={52} height={52}
-                      className="rounded-[14px] object-cover border-2 border-purple-100" style={{ aspectRatio: "1" }} />
-                  : <div className="w-[52px] h-[52px] rounded-[14px] bg-purple-50 border-2 border-purple-100 flex items-center justify-center text-xl">✨</div>
-                }
-              </div>
-              <div className="flex-1 min-w-0">
-                {user?.username
-                  ? <p className="text-[0.9rem] font-extrabold text-[#1c1c1e] truncate">@{user.username}</p>
-                  : <p className="text-[0.82rem] text-[#8e8e93]">Хэрэглэгчийн нэр байхгүй</p>
-                }
-                {user?.lookScore != null && (
-                  <p className="text-[0.72rem] text-[#9333ea] font-bold mt-0.5">Оноо: {user.lookScore}/100</p>
-                )}
-              </div>
-            </div>
-
-            {/* Username edit */}
-            {!editingUsername ? (
-              <button
-                onClick={() => { setEditingUsername(true); setNewUsername(user?.username ?? ""); }}
-                className="w-full py-2.5 rounded-full text-[0.8rem] font-semibold border border-[rgba(0,0,0,0.1)] text-[#6e6e73] bg-transparent cursor-pointer hover:bg-[rgba(0,0,0,0.02)] transition-all"
-              >
-                {user?.username ? "✏️ Нэр солих" : "➕ Нэр үүсгэх"}
-              </button>
+          {/* Compact payment history */}
+          <div className="card p-4">
+            <p className="label-style mb-3">Төлбөрийн түүх</p>
+            {!data?.payments.filter((p) => p.status === "paid").length ? (
+              <p className="text-[0.78rem] text-[#aeaeb2] text-center py-3">Төлбөр байхгүй</p>
             ) : (
+              <div className="flex flex-col gap-2">
+                {data.payments.filter((p) => p.status === "paid").slice(0, 5).map((p) => {
+                  const typeLabel = p.type === "basic" ? "Basic" : p.type === "pro" ? "Pro" : p.type === "standard" ? "Standard" : p.type;
+                  return (
+                    <div key={p.invoiceId} className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-[0.78rem] font-semibold text-[#1c1c1e]">{typeLabel} захиалга</p>
+                        <p className="text-[0.68rem] text-[#aeaeb2]">{p.paidAt ? fmt(p.paidAt) : fmt(p.createdAt)}</p>
+                      </div>
+                      <span className="text-[0.82rem] font-extrabold text-[#1c1c1e] shrink-0">{p.amount.toLocaleString()}₮</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Username edit — kept in left col for quick access */}
+          {editingUsername && (
+            <div className="card p-4">
+              <p className="label-style mb-3">Нэр өөрчлөх</p>
               <div className="flex flex-col gap-2">
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9333ea] font-bold text-[0.85rem]">@</span>
@@ -242,36 +228,24 @@ export default function ProfilePage() {
                     value={newUsername}
                     onChange={(e) => setNewUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20))}
                     placeholder="username"
-                    className="w-full pl-8 pr-8 py-2.5 rounded-xl text-[0.85rem] font-semibold text-[#1c1c1e] outline-none transition-all"
-                    style={{
-                      background: "rgba(147,51,234,0.04)",
-                      border: `1.5px solid ${unameStatus === "ok" ? "#16a34a" : unameStatus === "taken" || unameStatus === "invalid" ? "#ef4444" : "rgba(147,51,234,0.2)"}`,
-                    }}
+                    className="w-full pl-8 pr-8 py-2.5 rounded-xl text-[0.85rem] font-semibold text-[#1c1c1e] outline-none"
+                    style={{ background: "rgba(147,51,234,0.04)", border: `1.5px solid ${unameStatus === "ok" ? "#16a34a" : unameStatus === "taken" || unameStatus === "invalid" ? "#ef4444" : "rgba(147,51,234,0.2)"}` }}
                     autoFocus
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[0.8rem]"
-                    style={{ color: unameStatus === "ok" ? "#16a34a" : "#ef4444" }}>
-                    {unameStatus === "ok" ? "✓" : unameStatus === "taken" || unameStatus === "invalid" ? "✗" : unameStatus === "checking" ? "⟳" : ""}
-                  </span>
                 </div>
-                <p className="text-[0.68rem] h-3" style={{ color: unameStatus === "ok" ? "#16a34a" : "#ef4444" }}>
-                  {unameStatus === "ok" ? "Боломжтой" : unameStatus === "taken" ? "Аль хэдийн бүртгэлтэй" : unameStatus === "invalid" ? "3–20 тэмдэгт, үсэг/тоо/_" : ""}
-                </p>
-                {unameError && <p className="text-[0.75rem] text-red-500">{unameError}</p>}
+                {unameError && <p className="text-[0.72rem] text-red-500">{unameError}</p>}
                 <div className="flex gap-2">
                   <button onClick={() => { setEditingUsername(false); setUnameError(null); }}
-                    className="flex-1 py-2 rounded-full text-[0.8rem] font-semibold border border-[rgba(0,0,0,0.1)] text-[#6e6e73] cursor-pointer bg-transparent">
-                    Болих
-                  </button>
+                    className="flex-1 py-2 rounded-full text-[0.78rem] font-semibold border border-[rgba(0,0,0,0.1)] text-[#6e6e73] cursor-pointer bg-transparent">Болих</button>
                   <button onClick={saveUsername} disabled={unameStatus !== "ok" || unameSaving}
-                    className="flex-1 py-2 rounded-full text-[0.8rem] font-extrabold text-white border-none cursor-pointer disabled:opacity-40"
+                    className="flex-1 py-2 rounded-full text-[0.78rem] font-extrabold text-white border-none cursor-pointer disabled:opacity-40"
                     style={{ background: "linear-gradient(270deg,#9333ea,#7c3aed)" }}>
-                    {unameSaving ? "..." : "Хадгалах"}
-                  </button>
+                    {unameSaving ? "..." : "Хадгалах"}</button>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3">
@@ -332,53 +306,98 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Right col — payment history */}
+        {/* Right col — Leaderboard (full width) */}
         <div className="lg:col-span-2">
-          <p className="label-style mb-[14px]">Төлбөрийн түүх</p>
+          <div className="card p-5">
+            <div className="flex items-center justify-between mb-5">
+              <p className="label-style">🏆 Leaderboard</p>
+              <div className="flex items-center gap-2">
+                {myRank && (
+                  <span className="text-[0.7rem] font-extrabold px-3 py-1 rounded-full text-white"
+                    style={{ background: "linear-gradient(270deg,#9333ea,#7c3aed)" }}>
+                    #{myRank} байр
+                  </span>
+                )}
+                <a href="/leaderboard" className="text-[0.72rem] text-[#9333ea] font-semibold hover:underline">
+                  Бүгдийг харах →
+                </a>
+              </div>
+            </div>
 
-          {isLoading ? (
-            <div className="flex flex-col gap-[10px]">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="card h-16" style={{ animation: "pulse 1.5s infinite" }} />
-              ))}
+            {/* Avatar + info */}
+            <div className="flex items-center gap-4 mb-5 p-4 rounded-2xl"
+              style={{ background: "linear-gradient(135deg,rgba(147,51,234,0.04),rgba(124,58,237,0.02))", border: "1px solid rgba(147,51,234,0.1)" }}>
+              <div className="shrink-0">
+                {user?.avatarUrl
+                  ? <Image src={user.avatarUrl} alt="avatar" width={64} height={64}
+                      className="rounded-[16px] object-cover border-2 border-purple-100" style={{ aspectRatio: "1" }} />
+                  : <div className="w-16 h-16 rounded-[16px] bg-purple-50 border-2 border-purple-100 flex items-center justify-center text-2xl">✨</div>
+                }
+              </div>
+              <div className="flex-1 min-w-0">
+                {user?.username
+                  ? <p className="text-[1rem] font-extrabold text-[#1c1c1e]">@{user.username}</p>
+                  : <p className="text-[0.85rem] text-[#8e8e93]">Хэрэглэгчийн нэр байхгүй</p>
+                }
+                {user?.lookScore != null
+                  ? <p className="text-[0.78rem] font-bold mt-1" style={{ color: "#9333ea" }}>Looksmax оноо: {user.lookScore}/100</p>
+                  : <p className="text-[0.75rem] text-[#aeaeb2] mt-1">Шинжилгээ хийснийхээ дараа оноо гарна</p>
+                }
+              </div>
+              {myRank && myRank <= 3 && (
+                <span className="text-3xl shrink-0">
+                  {myRank === 1 ? "🥇" : myRank === 2 ? "🥈" : "🥉"}
+                </span>
+              )}
             </div>
-          ) : !data?.payments.filter((p) => p.status === "paid").length ? (
-            <div className="card p-10 text-center">
-              <p className="text-[0.9rem] text-[#8e8e93]">Одоогоор төлөгдсөн төлбөр байхгүй байна.</p>
-              <p className="text-[0.82rem] text-[#aeaeb2] mt-[6px]">Захиалга хийхэд л энд харагдана.</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {data.payments.filter((p) => p.status === "paid").map((p) => {
-                const feat = FEATURE[p.type];
-                const typeLabel =
-                  p.type === "basic" ? "Basic захиалга" :
-                  p.type === "pro"   ? "Pro захиалга"   :
-                  feat?.label ?? p.type;
-                return (
-                  <div key={p.invoiceId} className="card px-5 py-[14px] flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-base shrink-0 text-[#16a34a]">
-                        {p.type === "basic" || p.type === "pro" ? "★" : (feat?.icon ?? "◇")}
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-[0.87rem] font-semibold text-[#1c1c1e] overflow-hidden text-ellipsis whitespace-nowrap">{typeLabel}</p>
-                        <p className="text-[0.75rem] text-[#8e8e93] mt-0.5">
-                          {p.paidAt ? fmt(p.paidAt) : fmt(p.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-[0.72rem] font-bold text-[#16a34a] bg-[rgba(22,163,74,0.08)] border border-[rgba(22,163,74,0.2)] px-[10px] py-1 rounded-full">
-                        Төлсөн
-                      </span>
-                      <span className="text-[0.9rem] font-extrabold text-[#1c1c1e]">{p.amount.toLocaleString()}₮</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+
+            {/* Username edit */}
+            {!editingUsername ? (
+              <button
+                onClick={() => { setEditingUsername(true); setNewUsername(user?.username ?? ""); }}
+                className="w-full py-2.5 rounded-full text-[0.82rem] font-semibold border border-[rgba(0,0,0,0.1)] text-[#6e6e73] bg-transparent cursor-pointer hover:bg-[rgba(0,0,0,0.02)] transition-all"
+              >
+                {user?.username ? "✏️ Хэрэглэгчийн нэр солих" : "➕ Хэрэглэгчийн нэр үүсгэх"}
+              </button>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9333ea] font-bold text-[0.85rem]">@</span>
+                  <input
+                    type="text"
+                    value={newUsername}
+                    onChange={(e) => setNewUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20))}
+                    placeholder="username"
+                    className="w-full pl-8 pr-8 py-2.5 rounded-xl text-[0.85rem] font-semibold text-[#1c1c1e] outline-none transition-all"
+                    style={{
+                      background: "rgba(147,51,234,0.04)",
+                      border: `1.5px solid ${unameStatus === "ok" ? "#16a34a" : unameStatus === "taken" || unameStatus === "invalid" ? "#ef4444" : "rgba(147,51,234,0.2)"}`,
+                    }}
+                    autoFocus
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[0.8rem]"
+                    style={{ color: unameStatus === "ok" ? "#16a34a" : "#ef4444" }}>
+                    {unameStatus === "ok" ? "✓" : unameStatus === "taken" || unameStatus === "invalid" ? "✗" : unameStatus === "checking" ? "⟳" : ""}
+                  </span>
+                </div>
+                <p className="text-[0.68rem] h-3" style={{ color: unameStatus === "ok" ? "#16a34a" : "#ef4444" }}>
+                  {unameStatus === "ok" ? "Боломжтой" : unameStatus === "taken" ? "Аль хэдийн бүртгэлтэй" : unameStatus === "invalid" ? "3–20 тэмдэгт, үсэг/тоо/_" : ""}
+                </p>
+                {unameError && <p className="text-[0.75rem] text-red-500">{unameError}</p>}
+                <div className="flex gap-2">
+                  <button onClick={() => { setEditingUsername(false); setUnameError(null); }}
+                    className="flex-1 py-2 rounded-full text-[0.8rem] font-semibold border border-[rgba(0,0,0,0.1)] text-[#6e6e73] cursor-pointer bg-transparent">
+                    Болих
+                  </button>
+                  <button onClick={saveUsername} disabled={unameStatus !== "ok" || unameSaving}
+                    className="flex-1 py-2 rounded-full text-[0.8rem] font-extrabold text-white border-none cursor-pointer disabled:opacity-40"
+                    style={{ background: "linear-gradient(270deg,#9333ea,#7c3aed)" }}>
+                    {unameSaving ? "..." : "Хадгалах"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
