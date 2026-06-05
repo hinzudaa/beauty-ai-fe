@@ -6,12 +6,40 @@ import { otpStart, otpVerify } from "@/apis";
 import { ApiError, tokenStore } from "@/utils/request";
 import type { OtpStartResponse, AuthResponse } from "@/types/auth";
 
+const SESSION_KEY = "looka_otp_session";
+
+function saveSession(s: OtpStartResponse | null) {
+  if (typeof window === "undefined") return;
+  if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+  else    localStorage.removeItem(SESSION_KEY);
+}
+
+function loadSession(): OtpStartResponse | null {
+  try {
+    const raw = typeof window !== "undefined" && localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as OtpStartResponse;
+    // Discard expired sessions
+    if (new Date(s.expiresAt).getTime() < Date.now()) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return s;
+  } catch { return null; }
+}
+
 export default function LoginPage() {
   const [step, setStep]       = useState<"phone" | "otp">("phone");
   const [phone, setPhone]     = useState("");
   const [error, setError]     = useState("");
   const [busy, setBusy]       = useState(false);
   const [session, setSession] = useState<OtpStartResponse | null>(null);
+
+  // Restore session on mount (handles page reload after SMS app switch)
+  useEffect(() => {
+    const saved = loadSession();
+    if (saved) { setSession(saved); setStep("otp"); }
+  }, []);
 
   const { data: secondsLeft = 0 } = useSWR(
     session ? ["countdown", session.expiresAt] : null,
@@ -32,16 +60,21 @@ export default function LoginPage() {
         if (cancelled) return;
         if ("token" in data) {
           const res = data as AuthResponse;
+          saveSession(null);
           tokenStore.set(res.token);
           const next = new URLSearchParams(window.location.search).get("next");
           window.location.href = next ? decodeURIComponent(next) : "/";
           return;
         }
         if (Date.now() < expiresAt + 2_000) { timer = setTimeout(check, 3_000); }
-        else { setError("OTP хугацаа дууссан. Дахин оролдоно уу."); setStep("phone"); setSession(null); }
+        else {
+          saveSession(null);
+          setError("OTP хугацаа дууссан. Дахин оролдоно уу."); setStep("phone"); setSession(null);
+        }
       } catch (err) {
         if (cancelled) return;
         if (err instanceof ApiError && (err.status === 404 || err.status === 410)) {
+          saveSession(null);
           setError("OTP хугацаа дууссан. Дахин оролдоно уу."); setStep("phone"); setSession(null); return;
         }
         if (Date.now() < expiresAt + 2_000) { timer = setTimeout(check, 3_000); }
@@ -50,19 +83,24 @@ export default function LoginPage() {
 
     let timer: ReturnType<typeof setTimeout> = setTimeout(check, 3_000);
 
-    // Mobile: when user comes back from SMS app, check immediately
+    // Mobile: fire immediately when user returns from SMS app
     function onVisible() {
-      if (document.visibilityState === "visible" && !cancelled) {
-        clearTimeout(timer);
-        timer = setTimeout(check, 300);  // small delay to let backend process
-      }
+      if (!cancelled) { clearTimeout(timer); timer = setTimeout(check, 400); }
     }
-    document.addEventListener("visibilitychange", onVisible);
+    function onVisChange() { if (document.visibilityState === "visible") onVisible(); }
+    // pageshow fires on iOS when coming back from bfcache (cached page restore)
+    function onPageShow(e: PageTransitionEvent) { if (e.persisted) onVisible(); }
+
+    document.addEventListener("visibilitychange", onVisChange);
+    window.addEventListener("focus", onVisible);
+    window.addEventListener("pageshow", onPageShow);
 
     return () => {
       cancelled = true;
       clearTimeout(timer);
-      document.removeEventListener("visibilitychange", onVisible);
+      document.removeEventListener("visibilitychange", onVisChange);
+      window.removeEventListener("focus", onVisible);
+      window.removeEventListener("pageshow", onPageShow);
     };
   }, [step, session]);
 
@@ -70,12 +108,12 @@ export default function LoginPage() {
     e.preventDefault(); setError("");
     if (!/^\d{8,16}$/.test(phone)) { setError("Утасны дугаар 8–16 оронтой байх ёстой"); return; }
     setBusy(true);
-    try { const res = await otpStart(phone); setSession(res); setStep("otp"); }
+    try { const res = await otpStart(phone); saveSession(res); setSession(res); setStep("otp"); }
     catch (err) { setError(err instanceof Error ? err.message : "Алдаа гарлаа"); }
     finally { setBusy(false); }
   }
 
-  function handleRetry() { setStep("phone"); setSession(null); setError(""); }
+  function handleRetry() { saveSession(null); setStep("phone"); setSession(null); setError(""); }
 
   const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   const disabled = busy || !phone;
