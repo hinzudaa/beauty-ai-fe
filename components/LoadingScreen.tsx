@@ -78,9 +78,9 @@ export default function LoadingScreen({ inline = false, text }: { inline?: boole
         <div className="absolute rounded-full"
           style={{ width: 88, height: 88, background: "radial-gradient(circle, rgba(147,51,234,0.18), transparent 70%)", animation: "lsPulse 2s ease-in-out infinite" }} />
 
-        <div className="relative z-10 bg-white rounded-2xl p-3 shadow-[0_8px_32px_rgba(147,51,234,0.2)]"
+        <div className="relative z-10 bg-none rounded-2xl p-3 "
           style={{ animation: "lsFloat 3s ease-in-out infinite" }}>
-          <Image src="/logo.svg" alt="Looka" width={80} height={30} priority />
+          <Image src="/logoo.svg" alt="Looka" width={80} height={30} priority />
         </div>
 
         {[0, 60, 120, 180, 240, 300].map((deg, i) => (

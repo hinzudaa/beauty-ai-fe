@@ -39,7 +39,7 @@ export default function Nav() {
       >
         {/* Logo */}
         <Link href="/" onClick={close} className="shrink-0">
-          <Image src="/logo.svg" alt="Looka" width={95} height={36} priority />
+          <Image src="/logoo.svg" alt="Looka" width={95} height={36} priority />
         </Link>
 
         {/* Centre links — desktop only */}

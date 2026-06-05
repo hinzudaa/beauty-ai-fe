@@ -128,7 +128,7 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="flex justify-center mb-10">
-          <Image src="/logo.svg" alt="Looka" width={140} height={53} priority
+          <Image src="/logoo.svg" alt="Looka" width={140} height={53} priority
             className="drop-shadow-[0_4px_12px_rgba(147,51,234,0.3)]" />
         </div>
 
