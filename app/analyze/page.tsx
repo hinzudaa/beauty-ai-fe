@@ -268,16 +268,7 @@ export default function AnalyzePage() {
       {/* Loading overlay — fixed fullscreen, no tree mismatch */}
       {(step === "checking" || step === "analyzing") && <LoadingScreen />}
 
-    <div className="min-h-screen relative overflow-hidden"
-      style={{ background: "linear-gradient(160deg, #fff0f8 0%, #f5f0ff 50%, #f0f4ff 100%)" }}>
-
-      {/* Cute bg orbs */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full opacity-20"
-          style={{ background: "radial-gradient(circle, #f472b6, transparent 70%)" }} />
-        <div className="absolute -bottom-40 -left-40 w-[400px] h-[400px] rounded-full opacity-15"
-          style={{ background: "radial-gradient(circle, #a78bfa, transparent 70%)" }} />
-      </div>
+    <div className="min-h-screen relative overflow-hidden">
 
       <div className="relative max-w-[560px] mx-auto px-5 pt-10 pb-24">
 
@@ -285,7 +276,7 @@ export default function AnalyzePage() {
         <div className="mb-8 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 text-[0.72rem] font-bold tracking-[0.12em] uppercase"
             style={{ background: "rgba(236,72,153,0.08)", color: "#db2777", border: "1px solid rgba(236,72,153,0.2)" }}>
-            🌸 AI Beauty · Looka
+            🌸 AI Looka · Beauty
           </div>
           <h1 className="text-[clamp(1.6rem,4vw,2.2rem)] font-extrabold tracking-[-0.03em] leading-[1.15]"
             style={{ color: "#1c1c1e" }}>
