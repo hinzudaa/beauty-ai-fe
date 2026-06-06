@@ -488,7 +488,7 @@ export default function AnalyzePage() {
                     <>
                       <p className="text-[2rem] font-extrabold leading-none mb-1"
                         style={{ color: plan.highlight && selectedPlan === plan.id ? "#fff" : "#1c1c1e" }}>
-                        ₮{(plan.id === "basic" ? prices.basic : prices.pro).toLocaleString()}
+                        ₮{(plan.id === "basic" ? prices.basic : plan.id === "standard" ? prices.standard : prices.pro).toLocaleString()}
                       </p>
                       <p className="text-[0.78rem] mb-4"
                         style={{ color: plan.highlight && selectedPlan === plan.id ? "rgba(255,255,255,0.4)" : "#8e8e93" }}>
